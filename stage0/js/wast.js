@@ -34,7 +34,7 @@ var wast = prototypes.base = {
     },
 
     winxedValue : function(v) { w.literalValue = v; },
-    toWinxed : function() { return "[!!! " + this.nodeType + " has no .toWinxed() method !!!]"; }
+    toWinxed : function() { return "[!!! Wast error: " + this.nodeType + " has no .toWinxed() method !!!]"; }
 }
 
 var def = function def(proto, name, extend, construct) {
@@ -123,17 +123,17 @@ def(stmt, "VarDecl", {
     }
 });
 
-def(stmt, "BinaryOperator", {
+def(expr, "BinaryOperator", {
     op : "",
     operator : function(o) { this.op = o; },
     operands : function(a,b) { this.children.push(a); this.children.push(b); }
 });
 
-def(stmt, "ArrayLiteral", {
+def(expr, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); }
 });
 
-def(stmt, "jsObjectLiteral", {
+def(expr, "jsObjectLiteral", {
     addElement : function(n, e) { this.children[n] = e; }
 });
 
@@ -155,6 +155,21 @@ def(expr, "InvokeStatement", {
         wx += this.name.toWinxed() + "(" +
             this.children.map(function(c) { return c.toWinxed(); }).join(", ") +
             ")";
+        return wx;
+    }
+});
+
+def(expr, "NewOperator", {
+    name : null,
+    setName : function(n) { this.name = n; },
+    addOperand : function(a) { this.children.push(a); },
+    toWinxed : function() {
+        var wx = "new ";
+        if (this.name.nodeType == "Literal")
+            wx += this.name.toWinxed();
+        else
+            wx += "(" + this.name.toWinxed() + ")";
+        wx += "(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
         return wx;
     }
 });

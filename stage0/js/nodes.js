@@ -30,6 +30,12 @@ function errorWast(msg) {
     return w;
 }
 
+function wastLiteral(txt) {
+    var w = getWast("Literal");
+    w.literalValue(txt);
+    return w;
+}
+
 exports.defineNodes = function (prototypes, constructors) {
 
 var node = prototypes.base = {
@@ -414,7 +420,11 @@ def(expr,'CallExpr', {
 
 def(expr,'NewExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("NewOperator");
+        w.setName(this.children[0].toWast());
+        for (var i = 1; i < this.children.length; i++)
+            w.addOperand(this.children[i].toWast());
+        return w;
     }
 });
 
