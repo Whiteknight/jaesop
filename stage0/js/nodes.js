@@ -1,4 +1,5 @@
-var wast = require("./js/wast");
+var wast = require("./wast");
+var sys = require("sys");
 
 function extend (base, ext, except) {
     for (var k in ext) {
@@ -98,12 +99,20 @@ def(node,'Program', {
     toWast : function() {
         var p = getWast("Program");
         var main = getWast("FunctionDecl");
+        var main_name = getWast("Literal");
+        main_name.literalValue("main");
+        main.setName(main_name);
+        main.addFlag("main");
         for (var i = 0; i < this.children.length; i++) {
-            if (this.children[i].nodeType == "FunctionDecl")
-                p.addFunction(this.children[i].toWast);
-            else {
-                main.addStatement(this.children[i].toWast);
+            if (this.children[i].nodeType == "FunctionDecl") {
+                sys.puts("Adding function");
+                p.addFunction(this.children[i].toWast());
+            } else {
+                sys.puts("Adding statement to main()");
+                main.addStatement(this.children[i].toWast());
+            }
         }
+        sys.puts("Adding main() to Program");
         p.addFunction(main);
         return p;
     }
@@ -379,7 +388,7 @@ def(expr,'CountExpr', {
 });
 
 def(expr,'CallExpr', {
-    toWast : function() {
+    toWast : function() {throw new Error(this.nodeType);
         throw new Error(this.nodeType);
     }
 });
@@ -398,7 +407,12 @@ def(expr,'MemberExpr', {
 
 def(expr,'InvokeExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        var w = getWast("InvokeStatement");
+        w.setObject(this.children[0].toWast());
+        w.setName(this.children[1].toWast());
+        for (var i = 2; i < this.children.length; i++)
+            w.addArgument(this.children[i].toWast());
+        return w;
     }
 });
 

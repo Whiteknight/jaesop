@@ -1,11 +1,12 @@
+var sys = require("sys");
 var prototypes = exports.prototypes = [];
 var constructors = exports.constructors = [];
 
 function extend (base, ext, except) {
     for (var k in ext) {
-      if (ext.hasOwnProperty(k) && (!except || !except[k])) {
-        base[k] = ext[k];
-      }
+        if (ext.hasOwnProperty(k) && (!except || !except[k])) {
+            base[k] = ext[k];
+        }
     }
 }
 
@@ -21,6 +22,11 @@ var beget = (function () {
 })();
 
 var wast = prototypes.base = {
+    init: function (props) {
+        extend(this, props);
+        this.children = [];
+        return this;
+    },
     children : [],
     nodeType : "WastNode",
     clone: function (extend) {
@@ -28,7 +34,7 @@ var wast = prototypes.base = {
     },
 
     winxedValue : function(v) { w.literalValue = v; },
-    toWinxed : function() { return ""; }
+    toWinxed : function() { return "[!!! " + this.nodeType + " has no .toWinxed() method !!!]"; }
 }
 
 var def = function def(proto, name, extend, construct) {
@@ -58,17 +64,30 @@ var expr = prototypes.expr = wast.clone();
 var stmt = prototypes.stmt = wast.clone();
 
 def(wast, "Program", {
-    functions : [],
-    addFunction: function(f) { this.functions.push(f); },
+    addFunction: function(f) { this.children.push(f); },
+    toWinxed: function() {
+        var wx = "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
+        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
+        return wx + "\n}}\n";
+    }
 });
 
 def(wast, "FunctionDecl", {
     name : "",
     setName : function(n) { this.name = n; },
+    flags : [],
+    addFlag : function(f) { this.flags.push(f.toString()); },
     args : [],
     addArg : function(a) { this.args.push(a); },
-    statements : [],
-    addStatement : function(s) { this.statements.push(s); }
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function() {
+        var wx = "    function " + this.name.toWinxed() +
+            "[" + this.flags.join(", ") + "] (" + this.args.join(", ") + ")\n" +
+            "    {\n" +
+            this.children.map(function(c) { return "        " + c.toWinxed(); }).join(";\n") +
+            ";\n    }";
+        return wx;
+    }
 });
 
 def(expr, "Literal", {
@@ -86,22 +105,33 @@ def(stmt, "VarDecl", {
     name : "",
     initializer : null,
     setName : function(n) { this.name = n; },
-    setInitializer : function(i) { this.initializer = i: }
+    setInitializer : function(i) { this.initializer = i; }
 });
 
 def(stmt, "BinaryOperator", {
     op : "",
-    children : [],
     operator : function(o) { this.op = o; },
     operands : function(a,b) { this.children.push(a); this.children.push(b); }
 });
 
 def(stmt, "ArrayLiteral", {
-    children : [],
     addElement : function(e) { this.children.push(e); }
 });
 
 def(stmt, "jsObjectLiteral", {
-    children : {},
     addElement : function(n, e) { this.children[n] = e; }
+});
+
+def(stmt, "InvokeStatement", {
+    name : null,
+    object : null,
+    setObject : function(o) { this.object = o; },
+    setName : function(n) { this.name = n; },
+    addArgument : function(a) { this.children.push(a); },
+    toWinxed : function() {
+        var wx = "(" + this.object.toWinxed() + ")." + this.name.toWinxed() + "(" +
+            this.children.map(function(c) { return c.toWinxed(); }).join(", ") +
+            ")";
+        return wx;
+    }
 });

@@ -6,12 +6,22 @@ var js2wx_exe = argv.shift().split("/").pop();
 
 function main(args) {
     var fs = require("fs");
-    var cafe = require("../lib/cafe");
-    var compiler = new cafe.js.Compiler();
+    var compilerBase = require("./stage0/js2winxed");
+    var compiler = new compilerBase.Compiler();
     var infile = args[0];
     var infileText = fs.readFileSync(infile).toString();
+
+    sys.puts("AST: \n");
     var ast = compiler.parse(infileText);
-    sys.inspect(ast);
+    dump(ast);
+
+    sys.puts("\nWAST: \n");
+    var wast = ast.toWast();
+    dump(wast);
+
+    sys.puts("\nWinxed: \n");
+    var winxed = wast.toWinxed();
+    sys.puts(winxed);
 }
 
 function usageAndExit() {
@@ -22,6 +32,10 @@ function usageAndExit() {
 function versionAndExit() {
     sys.puts(js2wx_exe + ": JS to Winxed compiler Version 0.0");
     process.exit(0);
+}
+
+function dump(x) {
+    sys.puts(sys.inspect(x, false, 20));
 }
 
 
