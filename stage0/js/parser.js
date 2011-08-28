@@ -1,5 +1,6 @@
 /* Jison generated parser */
 var grammar = (function(){
+
 var parser = {trace: function trace() { },
 yy: {},
 symbols_: {"error":2,"IdentifierName":3,"IDENT":4,"NULLTOKEN":5,"TRUETOKEN":6,"FALSETOKEN":7,"BREAK":8,"CASE":9,"CATCH":10,"CONTINUE":11,"DEBUGGER":12,"DEFAULT":13,"DELETETOKEN":14,"DO":15,"ELSE":16,"FINALLY":17,"FOR":18,"FUNCTION":19,"IF":20,"INTOKEN":21,"INSTANCEOF":22,"NEW":23,"RETURN":24,"SWITCH":25,"THIS":26,"THROW":27,"TRY":28,"TYPEOF":29,"VAR":30,"VOIDTOKEN":31,"WHILE":32,"WITH":33,"Literal":34,"NUMBER":35,"STRING":36,"RegularExpressionLiteralBegin":37,"REGEXP_BODY":38,"/":39,"DIVEQUAL":40,"Property":41,":":42,"AssignmentExpr":43,"(":44,")":45,"OPENBRACE":46,"FunctionBody":47,"CLOSEBRACE":48,"FormalParameterList":49,"PropertyList":50,",":51,"PrimaryExpr":52,"PrimaryExprNoBrace":53,"THISTOKEN":54,"ArrayLiteral":55,"Expr":56,"[":57,"]":58,"Elision":59,"ElementList":60,"ElisionOpt":61,"MemberExpr":62,"FunctionExpr":63,".":64,"Arguments":65,"MemberExprNoBF":66,"NewExpr":67,"NewExprNoBF":68,"CallExpr":69,"CallExprNoBF":70,"ArgumentList":71,"LeftHandSideExpr":72,"LeftHandSideExprNoBF":73,"PostfixExpr":74,"PLUSPLUS":75,"MINUSMINUS":76,"PostfixExprNoBF":77,"UnaryExprCommon":78,"UnaryExpr":79,"+":80,"-":81,"~":82,"!":83,"UnaryExprNoBF":84,"MultiplicativeExpr":85,"*":86,"%":87,"MultiplicativeExprNoBF":88,"AdditiveExpr":89,"AdditiveExprNoBF":90,"ShiftExpr":91,"LSHIFT":92,"RSHIFT":93,"URSHIFT":94,"ShiftExprNoBF":95,"RelationalExpr":96,"<":97,">":98,"LE":99,"GE":100,"RelationalExprNoIn":101,"RelationalExprNoBF":102,"EqualityExpr":103,"EQEQ":104,"NE":105,"STREQ":106,"STRNEQ":107,"EqualityExprNoIn":108,"EqualityExprNoBF":109,"BitwiseANDExpr":110,"&":111,"BitwiseANDExprNoIn":112,"BitwiseANDExprNoBF":113,"BitwiseXORExpr":114,"^":115,"BitwiseXORExprNoIn":116,"BitwiseXORExprNoBF":117,"BitwiseORExpr":118,"|":119,"BitwiseORExprNoIn":120,"BitwiseORExprNoBF":121,"LogicalANDExpr":122,"AND":123,"LogicalANDExprNoIn":124,"LogicalANDExprNoBF":125,"LogicalORExpr":126,"OR":127,"LogicalORExprNoIn":128,"LogicalORExprNoBF":129,"ConditionalExpr":130,"?":131,"ConditionalExprNoIn":132,"AssignmentExprNoIn":133,"ConditionalExprNoBF":134,"AssignmentOperator":135,"AssignmentExprNoBF":136,"=":137,"PLUSEQUAL":138,"MINUSEQUAL":139,"MULTEQUAL":140,"LSHIFTEQUAL":141,"RSHIFTEQUAL":142,"URSHIFTEQUAL":143,"ANDEQUAL":144,"XOREQUAL":145,"OREQUAL":146,"MODEQUAL":147,"ExprNoIn":148,"ExprNoBF":149,"Statement":150,"Block":151,"VariableStatement":152,"ConstStatement":153,"FunctionDeclaration":154,"EmptyStatement":155,"ExprStatement":156,"IfStatement":157,"IterationStatement":158,"ContinueStatement":159,"BreakStatement":160,"ReturnStatement":161,"WithStatement":162,"SwitchStatement":163,"LabelledStatement":164,"ThrowStatement":165,"TryStatement":166,"DebuggerStatement":167,"SourceElements":168,"VariableDeclarationList":169,";":170,"Initializer":171,"VariableDeclarationListNoIn":172,"InitializerNoIn":173,"CONSTTOKEN":174,"ConstDeclarationList":175,"ConstDeclaration":176,"ExprNoInOpt":177,"ExprOpt":178,"CaseBlock":179,"CaseClausesOpt":180,"DefaultClause":181,"CaseClauses":182,"CaseClause":183,"Program":184,"$accept":0,"$end":1},
@@ -657,7 +658,11 @@ parse: function parse(input) {
 
     return true;
 }};/* Jison generated lexer */
-var lexer = (function(){var lexer = ({EOF:1,
+var lexer = (function(){
+
+
+
+var lexer = ({EOF:1,
 parseError:function parseError(str, hash) {
         if (this.yy.parseError) {
             this.yy.parseError(str, hash);
@@ -732,7 +737,7 @@ next:function () {
                 this.yylloc = {first_line: this.yylloc.last_line,
                                last_line: this.yylineno+1,
                                first_column: this.yylloc.last_column,
-                               last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match.length}
+                               last_column: lines ? lines[lines.length-1].length-1 : this.yylloc.last_column + match[0].length}
                 this.yytext += match[0];
                 this.match += match[0];
                 this.matches = match;
