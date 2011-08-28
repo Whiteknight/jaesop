@@ -1,3 +1,4 @@
+var wast = require("./js/wast");
 
 function extend (base, ext, except) {
     for (var k in ext) {
@@ -18,6 +19,9 @@ var beget = (function () {
     }
 })();
 
+function getWast(name) {
+    return new wast.constructors[name]();
+}
 
 exports.defineNodes = function (prototypes, constructors) {
 
@@ -52,33 +56,15 @@ var node = prototypes.base = {
         if (constructors[this.nodeType].handlers['parse'])
           constructors[this.nodeType].handlers['parse'].map(function (fn) { fn.call(self); });
     },
-    toJsonML: function toJsonML () {
-        var json = [this.nodeType, {}];
-        extend(json[1], this, {nodeType:1,children:1});
-        var kids = this.children.map(function (kid) { return kid.toJsonML(); });
-        return json.concat(kids);
+    toWast: function () {
+        return null;
     }
 };
 
 var expr = prototypes.expr = node.clone();
 var stmt = prototypes.stmt = node.clone();
-
-var binaryExpr = prototypes.binaryExpr = expr.clone({
-    toJsonML: function toJSON () {
-        var json = ['BinaryExpr', {op: this.op},
-                      this.children[0].toJsonML(),
-                      this.children[1].toJsonML()];
-        return json;
-    }
-});
-
-var unaryExpr = prototypes.unaryExpr = expr.clone({
-    toJsonML: function toJSON () {
-        var json = ['UnaryExpr', {op: this.op},
-                      this.children[0].toJsonML()];
-        return json;
-    }
-});
+var binaryExpr = prototypes.binaryExpr = expr.clone();
+var unaryExpr = prototypes.unaryExpr = expr.clone();
 
 
 var def = function def(proto, name, extend, construct) {
@@ -108,10 +94,29 @@ var def = function def(proto, name, extend, construct) {
 */
 
 // Program node
-def(node,'Program', { });
+def(node,'Program', {
+    toWast : function() {
+        var p = getWast("Program");
+        var main = getWast("FunctionDecl");
+        for (var i = 0; i < this.children.length; i++) {
+            if (this.children[i].nodeType == "FunctionDecl")
+                p.addFunction(this.children[i].toWast);
+            else {
+                main.addStatement(this.children[i].toWast);
+        }
+        p.addFunction(main);
+        return p;
+    }
+});
 
 // Identifier node
-def(node,'IdPatt', { }, function (name) {
+def(node,'IdPatt', {
+    toWast : function() {
+        var w = getWast("Literal");
+        w.literalValue(this.name);
+        return w;
+    }
+}, function (name) {
     this.init({name:name});
     this.fire('parse');
     this.nodeType = 'IdPatt';
@@ -119,76 +124,218 @@ def(node,'IdPatt', { }, function (name) {
 });
 
 // Literal expression node
-def(expr,'LiteralExpr', { });
+def(expr,'LiteralExpr', {
+    toWast : function() {
+        var w = getWast("Literal");
+        var v;
+        switch (this.type) {
+            case 'null':
+                v = 'null';
+            case 'string':
+                v = '"'+this.value+'"';
+            default:
+                v = this.value.toString();
+        }
+        w.literalValue(v);
+        return w;
+    }
+});
 
 // "this" expression node
-def(expr,'ThisExpr', { });
+def(expr,'ThisExpr', {
+    toWast : function() {
+        var w = getWast("Literal");
+        w.literalValue("self");
+        return w;
+    }
+});
 
 // Regexp Literal expression node
-def(expr,'RegExpExpr', { });
+def(expr,'RegExpExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // Var statement node
-def(stmt,'VarDecl', { });
+def(stmt,'VarDecl', {
+    toWast : function() {
+        var w = getWast("VarDecl");
+        w.setName(this.name);
+        if (this.children.length > 0)
+            w.setInitializer(this.children[0].toWast());
+        return w;
+    }
+});
 
 // Const statement node
 def(stmt,'ConstDecl', { });
 
 // Init pattern node
-def(expr,'InitPatt', { });
+def(expr,'InitPatt', {
+    toWast : function() {
+        var w = getWast("Literal");
+        w.literalValue(this.name);
+        return w;
+    }
+});
 
 // Identifier expression node
-def(expr,'IdExpr', { });
+def(expr,'IdExpr', {
+    toWast : function() {
+        var w = getWast("Literal");
+        w.literalValue(this.name);
+        return w;
+    }
+});
 
 // Assignment expression node
-def(expr,'AssignExpr', { });
+def(expr,'AssignExpr', {
+    toWast : function() {
+        var w = getWast("BinaryOperator");
+        w.operator("=");
+        w.operands(this.children[0].toWast(), this.children[1].toWast());
+        return w;
+    }
+});
 
-def(expr,'ArrayExpr', { });
+def(expr,'ArrayExpr', {
+    toWast : function() {
+        var w = getWast("ArrayLiteral");
+        this.children.map(function(c) { w.addElement(c.toWast()); });
+        return w;
+    }
+});
 
-def(expr,'ObjectExpr', { });
+def(expr,'ObjectExpr', {
+    toWast : function() {
+        var w = getWast("jsObjectLiteral");
+        this.children.map(function(c) { w.addElement(c.name, c.children[0].toWast()); });
+        return w;
+    }
+});
 
-def(node,'DataProp', { });
+def(node,'DataProp', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(node,'GetterSetterProp', { });
+def(node,'GetterSetterProp', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // Function declaration node
-def(stmt,'FunctionDecl', { });
+def(stmt,'FunctionDecl', {
+    toWast : function() {
+        var w = getWast("FunctionDecl");
+        this.children.map(function(c) { w.addStatement(c.name, c.children[0].toWast()); });
+        return w;
+    }
+});
 
 // Function expression node
 def(expr,'FunctionExpr', prototypes.FunctionDecl);
 
 // Param declaration node
-def(node,'ParamDecl', { });
+def(node,'ParamDecl', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // return statement node
-def(stmt,'ReturnStmt', { });
+def(stmt,'ReturnStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'TryStmt', { });
+def(stmt,'TryStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'BlockStmt', { });
+def(stmt,'BlockStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(node,'CatchClause', { });
+def(node,'CatchClause', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'ThrowStmt', { });
+def(stmt,'ThrowStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'LabelledStmt', { });
+def(stmt,'LabelledStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'BreakStmt', { });
+def(stmt,'BreakStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'ContinueStmt', { });
+def(stmt,'ContinueStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'SwitchStmt', { });
+def(stmt,'SwitchStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(node,'Case', { });
-def(node,'DefaultCase', { });
+def(node,'Case', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
+def(node,'DefaultCase', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'WithStmt', { });
+def(stmt,'WithStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // operators
-def(expr,'ConditionalExpr', { });
+def(expr,'ConditionalExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(unaryExpr,'UnaryExpr', { });
+def(unaryExpr,'UnaryExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(binaryExpr,'BinaryExpr', { });
+def(binaryExpr,'BinaryExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 def(binaryExpr,'LogicalORExpr', {op: '||'});
 def(binaryExpr,'LogicalANDExpr', {op: '&&'});
@@ -225,35 +372,87 @@ def(unaryExpr,'UnaryPlusExpr', {op: '+'});
 def(unaryExpr,'DeleteExpr', {op: 'delete'});
 def(unaryExpr,'TypeofExpr', {op: 'typeof'});
 
-def(expr,'CountExpr', { });
+def(expr,'CountExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(expr,'CallExpr', { });
+def(expr,'CallExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(expr,'NewExpr', { });
+def(expr,'NewExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(expr,'MemberExpr', { });
+def(expr,'MemberExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(expr,'InvokeExpr', { });
+def(expr,'InvokeExpr', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // debugger node
-def(stmt,'DebuggerStmt', { });
+def(stmt,'DebuggerStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // empty node
-def(node,'Empty', { });
+def(node,'Empty', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'EmptyStmt', { });
+def(stmt,'EmptyStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 // control structs
 
-def(stmt,'WhileStmt', { });
+def(stmt,'WhileStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'DoWhileStmt', { });
+def(stmt,'DoWhileStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'ForStmt', { });
+def(stmt,'ForStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'ForInStmt', { });
+def(stmt,'ForInStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
-def(stmt,'IfStmt', { });
+def(stmt,'IfStmt', {
+    toWast : function() {
+        throw new Error(this.nodeType);
+    }
+});
 
 return def;
 }
