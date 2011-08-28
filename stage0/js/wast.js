@@ -133,11 +133,25 @@ def(expr, "BinaryOperator", {
 });
 
 def(expr, "ArrayLiteral", {
-    addElement : function(e) { this.children.push(e); }
+    addElement : function(e) { this.children.push(e); },
+    toWinxed : function() {
+        return "JSArray(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
+    }
 });
 
 def(expr, "jsObjectLiteral", {
-    addElement : function(n, e) { this.children[n] = e; }
+    addElement : function(n, e) { this.children.push(e); },
+    toWinxed : function() {
+        var wx = "new JSObject(";
+        var first = true;
+        for (var key in this.children) {
+            if (!first)
+                wx += ", ";
+            wx += this.children[key].toWinxed() + ":[named('" + key.toString() + "')]";
+            first = false;
+        }
+        return wx + ")";
+    }
 });
 
 def(expr, "InvokeStatement", {
