@@ -64,7 +64,7 @@ var node = prototypes.base = {
           constructors[this.nodeType].handlers['parse'].map(function (fn) { fn.call(self); });
     },
     toWast: function () {
-        return null;
+        return errorWast();
     }
 };
 
@@ -245,7 +245,14 @@ def(node,'GetterSetterProp', {
 def(stmt,'FunctionDecl', {
     toWast : function() {
         var w = getWast("FunctionDecl");
-        this.children.map(function(c) { w.addStatement(c.name, c.children[0].toWast()); });
+        w.setName(this.children[0].toWast());
+        for (var i = 1; i < this.children.length; i++) {
+            var child = this.children[i];
+            if (child.nodeType == "ParamDecl")
+                w.addArg(child.toWast());
+            else
+                w.addStatement(child.toWast());
+        }
         return w;
     }
 });
@@ -256,7 +263,9 @@ def(expr,'FunctionExpr', prototypes.FunctionDecl);
 // Param declaration node
 def(node,'ParamDecl', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("Literal");
+        w.literalValue(this.children[0].name);
+        return w;
     }
 });
 

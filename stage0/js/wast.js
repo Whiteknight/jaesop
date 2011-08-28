@@ -80,7 +80,7 @@ def(wast, "Program", {
 });
 
 def(wast, "FunctionDecl", {
-    name : "",
+    name : null,
     setName : function(n) { this.name = n; },
     flags : [],
     addFlag : function(f) { this.flags.push(f.toString()); },
@@ -89,7 +89,8 @@ def(wast, "FunctionDecl", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function() {
         var wx = "    function " + this.name.toWinxed() +
-            "[" + this.flags.join(", ") + "] (" + this.args.join(", ") + ")\n" +
+            "[" + this.flags.join(", ") + "] " +
+            "(" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ")\n" +
             "    {\n" +
             this.children.map(function(c) { return "        " + c.toWinxed(); }).join(";\n") +
             ";\n    }";
