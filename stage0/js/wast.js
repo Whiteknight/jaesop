@@ -126,7 +126,10 @@ def(stmt, "VarDecl", {
 def(expr, "BinaryOperator", {
     op : "",
     operator : function(o) { this.op = o; },
-    operands : function(a,b) { this.children.push(a); this.children.push(b); }
+    operands : function(a,b) { this.children.push(a); this.children.push(b); },
+    toWinxed : function() {
+        return this.children.map(function(c) { return c.toWinxed(); }).join(" " + this.op + " ");
+    }
 });
 
 def(expr, "ArrayLiteral", {
@@ -171,5 +174,12 @@ def(expr, "NewOperator", {
             wx += "(" + this.name.toWinxed() + ")";
         wx += "(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
         return wx;
+    }
+});
+
+def(expr, "MemberExpr", {
+    addMember : function(m) { this.children.push(m); },
+    toWinxed : function() {
+        return this.children.map(function(c) { return c.toWinxed(); }).join(".");
     }
 });

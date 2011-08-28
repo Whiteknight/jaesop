@@ -430,7 +430,9 @@ def(expr,'NewExpr', {
 
 def(expr,'MemberExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("MemberExpr");
+        this.children.forEach(function(c) { w.addMember(c.toWast()); });
+        return w;
     }
 });
 
