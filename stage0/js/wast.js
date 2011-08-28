@@ -145,8 +145,12 @@ def(expr, "InvokeStatement", {
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function() {
         var wx = "";
-        if (this.object != null)
-            wx += "(" + this.object.toWinxed() + ").";
+        if (this.object != null) {
+            if (this.object.nodeType == "Literal")
+                wx += this.object.toWinxed() + ".";
+            else
+                wx += "(" + this.object.toWinxed() + ").";
+        }
 
         wx += this.name.toWinxed() + "(" +
             this.children.map(function(c) { return c.toWinxed(); }).join(", ") +
