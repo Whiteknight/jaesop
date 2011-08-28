@@ -66,7 +66,14 @@ var stmt = prototypes.stmt = wast.clone();
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
     toWinxed: function() {
-        var wx = "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
+        var wx = "$include 'jsinclude.winxed';\n" +
+                 "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
+        wx += "    function 'init_js'[anon,load,init]()\n" +
+              "    {\n" +
+              "        var rosella = load_packfile('rosella/core.pbc');\n" +
+              "        var(Rosella.initialize_rosella)();\n" +
+              "        var(Rosella.load_bytecode_file)('jsruntime.pbc');\n" +
+              "    }\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
         return wx + "\n}}\n";
     }
@@ -105,7 +112,14 @@ def(stmt, "VarDecl", {
     name : "",
     initializer : null,
     setName : function(n) { this.name = n; },
-    setInitializer : function(i) { this.initializer = i; }
+    setInitializer : function(i) { this.initializer = i; },
+    toWinxed : function() {
+        var wx =  "var " + this.name.toWinxed();
+        if (this.initializer != null) {
+            wx += " = " + this.initializer.toWinxed();
+        }
+        return wx;
+    }
 });
 
 def(stmt, "BinaryOperator", {
@@ -122,14 +136,18 @@ def(stmt, "jsObjectLiteral", {
     addElement : function(n, e) { this.children[n] = e; }
 });
 
-def(stmt, "InvokeStatement", {
+def(expr, "InvokeStatement", {
     name : null,
     object : null,
     setObject : function(o) { this.object = o; },
     setName : function(n) { this.name = n; },
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function() {
-        var wx = "(" + this.object.toWinxed() + ")." + this.name.toWinxed() + "(" +
+        var wx = "";
+        if (this.object != null)
+            wx += "(" + this.object.toWinxed() + ").";
+
+        wx += this.name.toWinxed() + "(" +
             this.children.map(function(c) { return c.toWinxed(); }).join(", ") +
             ")";
         return wx;

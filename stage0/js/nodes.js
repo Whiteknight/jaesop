@@ -24,6 +24,12 @@ function getWast(name) {
     return new wast.constructors[name]();
 }
 
+function errorWast(msg) {
+    var w = getWast("Literal");
+    w.literalValue("[!!! Node error: " + msg + " !!!]");
+    return w;
+}
+
 exports.defineNodes = function (prototypes, constructors) {
 
 var node = prototypes.base = {
@@ -105,14 +111,11 @@ def(node,'Program', {
         main.addFlag("main");
         for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].nodeType == "FunctionDecl") {
-                sys.puts("Adding function");
                 p.addFunction(this.children[i].toWast());
             } else {
-                sys.puts("Adding statement to main()");
                 main.addStatement(this.children[i].toWast());
             }
         }
-        sys.puts("Adding main() to Program");
         p.addFunction(main);
         return p;
     }
@@ -162,7 +165,7 @@ def(expr,'ThisExpr', {
 // Regexp Literal expression node
 def(expr,'RegExpExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
@@ -170,9 +173,13 @@ def(expr,'RegExpExpr', {
 def(stmt,'VarDecl', {
     toWast : function() {
         var w = getWast("VarDecl");
-        w.setName(this.name);
-        if (this.children.length > 0)
-            w.setInitializer(this.children[0].toWast());
+        var node = this.children[0];
+        if (node.nodeType == "InitPatt") {
+            w.setName(node.children[0].toWast());
+            w.setInitializer(node.children[1].toWast());
+        } else {
+            w = errorWast("VarDecl child " + node.nodeType + " cannot be converted to wast");
+        }
         return w;
     }
 });
@@ -183,9 +190,7 @@ def(stmt,'ConstDecl', { });
 // Init pattern node
 def(expr,'InitPatt', {
     toWast : function() {
-        var w = getWast("Literal");
-        w.literalValue(this.name);
-        return w;
+        return this.children[0].toWast();
     }
 });
 
@@ -226,13 +231,13 @@ def(expr,'ObjectExpr', {
 
 def(node,'DataProp', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(node,'GetterSetterProp', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
@@ -251,98 +256,98 @@ def(expr,'FunctionExpr', prototypes.FunctionDecl);
 // Param declaration node
 def(node,'ParamDecl', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 // return statement node
 def(stmt,'ReturnStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'TryStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'BlockStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(node,'CatchClause', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'ThrowStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'LabelledStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'BreakStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'ContinueStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'SwitchStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(node,'Case', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 def(node,'DefaultCase', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'WithStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 // operators
 def(expr,'ConditionalExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(unaryExpr,'UnaryExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(binaryExpr,'BinaryExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
@@ -383,25 +388,30 @@ def(unaryExpr,'TypeofExpr', {op: 'typeof'});
 
 def(expr,'CountExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(expr,'CallExpr', {
-    toWast : function() {throw new Error(this.nodeType);
-        throw new Error(this.nodeType);
+    toWast : function() {
+        var w = getWast("InvokeStatement");
+        w.setObject(null);
+        w.setName(this.children[0].toWast());
+        for (var i = 1; i < this.children.length; i++)
+            w.addArgument(this.children[i].toWast());
+        return w;
     }
 });
 
 def(expr,'NewExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(expr,'MemberExpr', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
@@ -419,20 +429,20 @@ def(expr,'InvokeExpr', {
 // debugger node
 def(stmt,'DebuggerStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 // empty node
 def(node,'Empty', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'EmptyStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
@@ -440,31 +450,31 @@ def(stmt,'EmptyStmt', {
 
 def(stmt,'WhileStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'DoWhileStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'ForStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'ForInStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
 def(stmt,'IfStmt', {
     toWast : function() {
-        throw new Error(this.nodeType);
+        return errorWast(this.nodeType);
     }
 });
 
