@@ -230,14 +230,14 @@ def(expr,'ArrayExpr', {
 def(expr,'ObjectExpr', {
     toWast : function() {
         var w = getWast("jsObjectLiteral");
-        this.children.map(function(c) { w.addElement(c.name, c.children[0].toWast()); });
+        this.children.map(function(c) { w.addElement(c.name, c.toWast()); });
         return w;
     }
 });
 
 def(node,'DataProp', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        return this.children[0].toWast();
     }
 });
 

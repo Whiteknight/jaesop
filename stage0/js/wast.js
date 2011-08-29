@@ -66,13 +66,12 @@ var stmt = prototypes.stmt = wast.clone();
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
     toWinxed: function() {
-        var wx = "$include 'jsinclude.winxed';\n" +
-                 "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
+        var wx = "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
         wx += "    function 'init_js'[anon,load,init]()\n" +
               "    {\n" +
               "        var rosella = load_packfile('rosella/core.pbc');\n" +
               "        var(Rosella.initialize_rosella)();\n" +
-              "        var(Rosella.load_bytecode_file)('jsruntime.pbc');\n" +
+              "        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
               "    }\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
         return wx + "\n}}\n";
@@ -140,7 +139,7 @@ def(expr, "ArrayLiteral", {
 });
 
 def(expr, "jsObjectLiteral", {
-    addElement : function(n, e) { this.children.push(e); },
+    addElement : function(n, e) { this.children[n] = e; },
     toWinxed : function() {
         var wx = "new JSObject(";
         var first = true;

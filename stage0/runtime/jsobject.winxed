@@ -3,7 +3,8 @@ namespace JavaScript[HLL] { namespace jsop_main
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
     const string ATTR_NAME_ATTRIBUTES = "attributes";
-    const string PROP_NAME_CODE = "code";
+    const string PROP_NAME_CODE = "!!!code!!!";
+    const string PROP_NAME_JSFUNC = "!!!jsfunction!!!";
 
     namespace JSObject
     {
@@ -19,7 +20,7 @@ namespace JavaScript[HLL] { namespace jsop_main
             ${ isa isa_jsobj, jsobj, jsobj_class };
             if (isa_jsobj) {
                 var proto = null;
-                ${ getattr proto, jsobj_class, ATTR_NAME_PROTOTYPE };
+                ${ getattribute proto, jsobj, jsobj_class, ATTR_NAME_PROTOTYPE };
                 return proto;
             }
             return null;
@@ -32,7 +33,7 @@ namespace JavaScript[HLL] { namespace jsop_main
             ${ isa isa_jsobj, jsobj, jsobj_class };
             if (isa_jsobj) {
                 var proto = null;
-                ${ getattr proto, jsobj_class, ATTR_NAME_CONSTRUCTOR };
+                ${ getattribute proto, jsobj, jsobj_class, ATTR_NAME_CONSTRUCTOR };
                 return proto;
             }
             return null;
@@ -40,7 +41,13 @@ namespace JavaScript[HLL] { namespace jsop_main
 
         function box_func(var f)
         {
-            // TODO: Store the boxed version in a prop of the Sub.
+            if (f instanceof JSFunction)
+                return f;
+            var jsf;
+            ${ getprop jsf, PROP_NAME_JSFUNC, f };
+            if (jsf == null)
+                jsf = new JSFunction(f);
+            return jsf;
         }
 
         function construct(var constructor, var args [slurpy])
@@ -54,7 +61,7 @@ namespace JavaScript[HLL] { namespace jsop_main
         function invoke(var obj, var args [slurpy])
         {
             var f = null;
-            ${ getprop f, self, PROP_NAME_CODE };
+            ${ getprop f, PROP_NAME_CODE, obj };
             if (f == null)
                 error("Cannot invoke non-code object");
             return obj.*f(args);
@@ -72,16 +79,14 @@ namespace JavaScript[HLL] { namespace jsop_main
                 ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
-            ${ setattr self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
-            if (has_func)
-                ${ setprop self, PROP_NAME_CODE, func_ref };
+            ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
         }
 
         function get_attr_str[vtable](string key)
         {
             var jsobj_class = class JSObject;
             var attrs;
-            ${ getattr attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             if (exists attrs[key])
                 return attrs[key];
             if (exists attrs[ATTR_NAME_PROTOTYPE]) {
@@ -96,18 +101,21 @@ namespace JavaScript[HLL] { namespace jsop_main
         {
             var jsobj_class = class JSObject;
             var attrs;
-            ${ getattr attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             attrs[key] = value;
         }
 
         function get_pmc_keyed[vtable](var key)
         {
+            return self.*(string(key));
         }
 
         function set_pmc_keyed[vtable](var key, var value)
         {
+            self.*(string(key)) = value;
         }
 
+        /*
         function get_pmc_keyed_int[vtable](int key)
         {
         }
@@ -115,5 +123,16 @@ namespace JavaScript[HLL] { namespace jsop_main
         function set_pmc_keyed_int[vtable](int key, var value)
         {
         }
+        */
     }
-}
+
+    class JSFunction : JSObject
+    {
+        function JSFunction(var func)
+        {
+            self.JSObject();
+            ${ setprop self, PROP_NAME_CODE, func };
+            ${ setprop func, PROP_NAME_JSFUNC, self };
+        }
+    }
+}}
