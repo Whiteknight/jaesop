@@ -110,11 +110,7 @@ var def = function def(proto, name, extend, construct) {
 def(node,'Program', {
     toWast : function() {
         var p = getWast("Program");
-        var main = getWast("FunctionDecl");
-        var main_name = getWast("Literal");
-        main_name.literalValue("main");
-        main.setName(main_name);
-        main.addFlag("main");
+        var main = getWast("MainFunctionDecl");
         for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].nodeType == "FunctionDecl") {
                 p.addFunction(this.children[i].toWast());

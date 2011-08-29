@@ -66,23 +66,22 @@ var stmt = prototypes.stmt = wast.clone();
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
     toWinxed: function() {
-        var wx = "namespace JavaScript[HLL] { namespace jsop_main\n{ \n";
-        wx += "    function 'init_js'[anon,load,init]()\n" +
+        var wx = "namespace JavaScript[HLL]\n{\n";
+        wx += "    function __init_js__[anon,load,init]()\n" +
               "    {\n" +
-              "        var rosella = load_packfile('rosella/core.pbc');\n" +
-              "        var(Rosella.initialize_rosella)();\n" +
-              "        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
+              //"        var rosella = load_packfile('rosella/core.pbc');\n" +
+              //"        var(Rosella.initialize_rosella)();\n" +
+              //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
+              "          load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
               "    }\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
-        return wx + "\n}}\n";
+        return wx + "\n}\n";
     }
 });
 
 def(wast, "FunctionDecl", {
     name : null,
     setName : function(n) { this.name = n; },
-    flags : [],
-    addFlag : function(f) { this.flags.push(f.toString()); },
     args : [],
     addArg : function(a) { this.args.push(a); },
     addStatement : function(s) { this.children.push(s); },
@@ -93,6 +92,24 @@ def(wast, "FunctionDecl", {
             "    {\n" +
             this.children.map(function(c) { return "        " + c.toWinxed(); }).join(";\n") +
             ";\n    }";
+        return wx;
+    }
+});
+
+def(wast, "MainFunctionDecl", {
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function() {
+        var wx = "    function __main__[main,anon](var arguments)\n" +
+                 "    {\n" +
+                 "        try {\n";
+        wx += this.children.map(function(c) {
+            return "            " + c.toWinxed();
+        }).join(";\n") + ";\n";
+        wx +=    "        } catch (__e__) {\n" +
+                 "            for (string bt in __e__.backtrace_strings())\n" +
+                 "                say(bt);\n" +
+                 "        }\n" +
+                 "    }";
         return wx;
     }
 });
@@ -141,14 +158,9 @@ def(expr, "ArrayLiteral", {
 def(expr, "jsObjectLiteral", {
     addElement : function(n, e) { this.children[n] = e; },
     toWinxed : function() {
-        var wx = "new JSObject(";
-        var first = true;
-        for (var key in this.children) {
-            if (!first)
-                wx += ", ";
-            wx += this.children[key].toWinxed() + ":[named('" + key.toString() + "')]";
-            first = false;
-        }
+        var wx = "new JavaScript.JSObject(null, null";
+        for (var key in this.children)
+            wx += ", " + this.children[key].toWinxed() + ":[named('" + key.toString() + "')]";
         return wx + ")";
     }
 });

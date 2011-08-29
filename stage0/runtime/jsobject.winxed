@@ -1,4 +1,4 @@
-namespace JavaScript[HLL] { namespace jsop_main
+namespace JavaScript[HLL]
 {
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
@@ -72,13 +72,15 @@ namespace JavaScript[HLL] { namespace jsop_main
     {
         var attributes;
 
-        function JSObject(var prototype, var constructor, var func_ref [optional], int has_func [opt_flag])
+        function JSObject(var prototype, var constructor, var values [slurpy,named])
         {
             var jsobj_class = class JSObject;
             var attrs = {
                 ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
+            for (string name in values)
+                attrs[name] = values[name];
             ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
         }
 
@@ -135,4 +137,4 @@ namespace JavaScript[HLL] { namespace jsop_main
             ${ setprop func, PROP_NAME_JSFUNC, self };
         }
     }
-}}
+}
