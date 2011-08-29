@@ -135,7 +135,7 @@ def(expr, "BinaryOperator", {
 def(expr, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
     toWinxed : function() {
-        return "JSArray(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
+        return "new JSArray(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
     }
 });
 
