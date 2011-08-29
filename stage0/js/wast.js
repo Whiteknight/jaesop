@@ -72,7 +72,7 @@ def(wast, "Program", {
               //"        var rosella = load_packfile('rosella/core.pbc');\n" +
               //"        var(Rosella.initialize_rosella)();\n" +
               //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
-              "          load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+              "        load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
               "    }\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
         return wx + "\n}\n";

@@ -8,24 +8,53 @@ function main(args) {
     var fs = require("fs");
     var compilerBase = require("./stage0/js2winxed");
     var compiler = new compilerBase.Compiler();
-    var infile = args[0];
+    var astdebug = 0;
+    var infile;
+    var outfile = "-";
+    var write = function (msg) { sys.puts(msg); };
+
+    while(args.length > 0) {
+        var arg = args.shift();
+        if (arg == "--astdebug")
+            astdebug = 1;
+        else if(arg == "-o")
+            outfile = args.shift();
+        else {
+            infile = arg;
+            if (args.length > 0) {
+                sys.puts("Too many arguments");
+                usageAndExit();
+            }
+        }
+    }
+
     var infileText = fs.readFileSync(infile).toString();
 
-    sys.puts("AST: \n");
     var ast = compiler.parse(infileText);
-    dump(ast);
+    if (astdebug == 1) {
+        sys.puts("AST: \n");
+        dump(ast);
+    }
 
-    sys.puts("\nWAST: \n");
     var wast = ast.toWast();
-    dump(wast);
 
-    sys.puts("\nWinxed: \n");
+    if (astdebug == 1) {
+        sys.puts("\nWAST: \n");
+        dump(wast);
+        sys.puts("\nWinxed: \n");
+    }
+
+    if (outfile != "-") {
+        var outfileHandle = fs.openSync(outfile, "w");
+        write = function(msg) { fs.writeSync(outfileHandle, msg, 0); };
+    }
+
     var winxed = wast.toWinxed();
-    sys.puts(winxed);
+    write(winxed);
 }
 
 function usageAndExit() {
-    sys.puts("Usage: " + node_exe + " " + js2wx_exe + " <file>");
+    sys.puts("Usage: " + node_exe + " " + js2wx_exe + "[--astdebug] [-o <wx_file>] <js_file>");
     process.exit(0);
 }
 
