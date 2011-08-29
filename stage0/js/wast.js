@@ -106,6 +106,7 @@ def(wast, "MainFunctionDecl", {
             return "            " + c.toWinxed();
         }).join(";\n") + ";\n";
         wx +=    "        } catch (__e__) {\n" +
+                 "            say(__e__.message);\n" +
                  "            for (string bt in __e__.backtrace_strings())\n" +
                  "                say(bt);\n" +
                  "        }\n" +
@@ -165,7 +166,7 @@ def(expr, "jsObjectLiteral", {
     }
 });
 
-def(expr, "InvokeStatement", {
+def(expr, "InvokeExpr", {
     name : null,
     object : null,
     setObject : function(o) { this.object = o; },
@@ -174,7 +175,7 @@ def(expr, "InvokeStatement", {
     toWinxed : function() {
         var wx = "";
         if (this.object != null) {
-            if (this.object.nodeType == "Literal")
+            if (this.object.nodeType == "Literal" || this.object.nodeType == "MemberExpr")
                 wx += this.object.toWinxed() + ".";
             else
                 wx += "(" + this.object.toWinxed() + ").";

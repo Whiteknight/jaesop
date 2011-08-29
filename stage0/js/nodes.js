@@ -145,8 +145,10 @@ def(expr,'LiteralExpr', {
         switch (this.type) {
             case 'null':
                 v = 'null';
+                break;
             case 'string':
-                v = '"'+this.value+'"';
+                v = "'"+this.value+"'";
+                break;
             default:
                 v = this.value.toString();
         }
@@ -434,7 +436,7 @@ def(expr,'MemberExpr', {
 
 def(expr,'InvokeExpr', {
     toWast : function() {
-        var w = getWast("InvokeStatement");
+        var w = getWast("InvokeExpr");
         w.setObject(this.children[0].toWast());
         w.setName(this.children[1].toWast());
         for (var i = 2; i < this.children.length; i++)

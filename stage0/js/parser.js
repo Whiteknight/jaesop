@@ -81,13 +81,13 @@ case 65: this.$ = $$[$0-1]; this.$.push(yy.Node('Empty'));
 break;
 case 68: this.$ = yy.Node('MemberExpr',{brackets:true},$$[$0-3],$$[$0-1]); 
 break;
-case 69: this.$ = yy.Node('MemberExpr',{brackets:false},$$[$0-2],yy.Node('LiteralExpr', {type: 'string', value: String($$[$0])})); 
+case 69: this.$ = yy.Node('MemberExpr',{brackets:false},$$[$0-2],yy.Node('LiteralExpr', {type: 'raw', value: String($$[$0])})); 
 break;
 case 70: this.$ = yy.Node('NewExpr',{},$$[$0-1]).appendList($$[$0]); 
 break;
 case 72: this.$ = yy.Node('MemberExpr',{brackets:true},$$[$0-3],$$[$0-1]); 
 break;
-case 73: this.$ = yy.Node('MemberExpr',{brackets:false},$$[$0-2],yy.Node('LiteralExpr', {type: 'string', value: String($$[$0])})); 
+case 73: this.$ = yy.Node('MemberExpr',{brackets:false},$$[$0-2],yy.Node('LiteralExpr', {type: 'raw', value: String($$[$0])})); 
 break;
 case 74: this.$ = yy.Node('NewExpr',{},$$[$0-1]).appendList($$[$0]); 
 break;
@@ -95,7 +95,7 @@ case 76: this.$ = yy.Node('NewExpr',{},$$[$0]);
 break;
 case 78: this.$ = yy.Node('NewExpr',{},$$[$0]); 
 break;
-case 79: 
+case 79:
         this.$ = $$[$0-1].nodeType === 'MemberExpr' ?
                 yy.Node('InvokeExpr',{brackets:$$[$0-1].brackets},$$[$0-1].children[0],$$[$0-1].children[1]).appendList($$[$0]):
                 yy.Node('CallExpr',{},$$[$0-1]).appendList($$[$0]);
@@ -107,7 +107,7 @@ case 81: this.$ = yy.Node('MemberExpr',{brackets:true},$$[$0-3],$$[$0-1]);
 break;
 case 82: this.$ = yy.Node('MemberExpr',{brackets:false},$$[$0-2],yy.Node('LiteralExpr', {type: 'string', value: String($$[$0])})); 
 break;
-case 83: 
+case 83:
         this.$ = $$[$0-1].nodeType === 'MemberExpr' ?
                 yy.Node('InvokeExpr',{brackets:$$[$0-1].brackets},$$[$0-1].children[0],$$[$0-1].children[1]).appendList($$[$0]):
                 yy.Node('CallExpr',{},$$[$0-1]).appendList($$[$0]);

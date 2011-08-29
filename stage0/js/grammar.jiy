@@ -59,9 +59,9 @@ Literal
     ;
 
 RegularExpressionLiteralBegin
-    : '/' 
+    : '/'
       { yy.inRegex = true; yy.lexer.unput($1); $$ = $1; }
-    | DIVEQUAL 
+    | DIVEQUAL
       { yy.inRegex = true; yy.lexer.unput($1); $$ = $1; }
     ;
 
@@ -129,7 +129,7 @@ ElementList
     ;
 
 ElisionOpt
-    : 
+    :
       { $$ = []; }
     | Elision
     ;
@@ -147,7 +147,7 @@ MemberExpr
     | MemberExpr '[' Expr ']'
       {{ $$ = yy.Node('MemberExpr',{brackets:true},$1,$3); }}
     | MemberExpr '.' IdentifierName
-      {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'string', value: String($3)})); }}
+      {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'raw', value: String($3)})); }}
     | NEW MemberExpr Arguments
       {{ $$ = yy.Node('NewExpr',{},$MemberExpr).appendList($Arguments); }}
     ;
@@ -157,7 +157,7 @@ MemberExprNoBF
     | MemberExprNoBF '[' Expr ']'
       {{ $$ = yy.Node('MemberExpr',{brackets:true},$1,$3); }}
     | MemberExprNoBF '.' IdentifierName
-      {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'string', value: String($3)})); }}
+      {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'raw', value: String($3)})); }}
     | NEW MemberExpr Arguments
       {{ $$ = yy.Node('NewExpr',{},$MemberExpr).appendList($Arguments); }}
     ;
@@ -176,7 +176,7 @@ NewExprNoBF
 
 CallExpr
     : MemberExpr Arguments
-      {{ 
+      {{
         $$ = $1.nodeType === 'MemberExpr' ?
                 yy.Node('InvokeExpr',{brackets:$1.brackets},$1.children[0],$1.children[1]).appendList($2):
                 yy.Node('CallExpr',{},$1).appendList($2);
@@ -191,7 +191,7 @@ CallExpr
 
 CallExprNoBF
     : MemberExprNoBF Arguments
-      {{ 
+      {{
         $$ = $1.nodeType === 'MemberExpr' ?
                 yy.Node('InvokeExpr',{brackets:$1.brackets},$1.children[0],$1.children[1]).appendList($2):
                 yy.Node('CallExpr',{},$1).appendList($2);
@@ -705,13 +705,13 @@ IterationStatement
     ;
 
 ExprOpt
-    : 
+    :
       {{ $$ = yy.Node('Empty'); }}
     | Expr
     ;
 
 ExprNoInOpt
-    : 
+    :
       {{ $$ = yy.Node('Empty'); }}
     | ExprNoIn
     ;
@@ -767,7 +767,7 @@ CaseBlock
     ;
 
 CaseClausesOpt
-    : 
+    :
       { $$ = []; }
     | CaseClauses
     ;
@@ -860,7 +860,7 @@ FormalParameterList
     ;
 
 FunctionBody
-    : 
+    :
       { $$ = []; }
     | SourceElements
       { $$ = $1.children; }
