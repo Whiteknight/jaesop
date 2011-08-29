@@ -2,6 +2,7 @@ namespace JavaScript[HLL] { namespace jsop_main
 {
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
+    const string ATTR_NAME_ATTRIBUTES = "attributes";
     const string PROP_NAME_CODE = "code";
 
     namespace JSObject
@@ -71,17 +72,32 @@ namespace JavaScript[HLL] { namespace jsop_main
                 ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
-            ${ setattr self, jsobj_class, "attributes", attrs };
+            ${ setattr self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
             if (has_func)
                 ${ setprop self, PROP_NAME_CODE, func_ref };
         }
 
         function get_attr_str[vtable](string key)
         {
+            var jsobj_class = class JSObject;
+            var attrs;
+            ${ getattr attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            if (exists attrs[key])
+                return attrs[key];
+            if (exists attrs[ATTR_NAME_PROTOTYPE]) {
+                var proto = attrs[ATTR_NAME_PROTOTYPE];
+                if (proto != null)
+                    return proto.*key;
+            }
+            return null;
         }
 
         function set_attr_str[vtable](string key, var value)
         {
+            var jsobj_class = class JSObject;
+            var attrs;
+            ${ getattr attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            attrs[key] = value;
         }
 
         function get_pmc_keyed[vtable](var key)
