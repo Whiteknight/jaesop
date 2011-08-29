@@ -1,0 +1,103 @@
+namespace JavaScript[HLL] { namespace jsop_main
+{
+    const string ATTR_NAME_PROTOTYPE = "prototype";
+    const string ATTR_NAME_CONSTRUCTOR = "constructor";
+    const string PROP_NAME_CODE = "code";
+
+    namespace JSObject
+    {
+        function error(string fmt, var args[slurpy])
+        {
+            die(sprintf("JSObject: " + fmt, args));
+        }
+
+        function get_prototype(var jsobj)
+        {
+            int isa_jsobj = 0;
+            var jsobj_class = class JSObject;
+            ${ isa isa_jsobj, jsobj, jsobj_class };
+            if (isa_jsobj) {
+                var proto = null;
+                ${ getattr proto, jsobj_class, ATTR_NAME_PROTOTYPE };
+                return proto;
+            }
+            return null;
+        }
+
+        function get_constructor(var jsobj)
+        {
+            int isa_jsobj = 0;
+            var jsobj_class = class JSObject;
+            ${ isa isa_jsobj, jsobj, jsobj_class };
+            if (isa_jsobj) {
+                var proto = null;
+                ${ getattr proto, jsobj_class, ATTR_NAME_CONSTRUCTOR };
+                return proto;
+            }
+            return null;
+        }
+
+        function box_func(var f)
+        {
+            // TODO: Store the boxed version in a prop of the Sub.
+        }
+
+        function construct(var constructor, var args [slurpy])
+        {
+            var con_proto = get_prototype(constructor);
+            var jsobj = new JSObject(con_proto, constructor);
+            jsobj.*constructor(args:[flat]);
+            return jsobj;
+        }
+
+        function invoke(var obj, var args [slurpy])
+        {
+            var f = null;
+            ${ getprop f, self, PROP_NAME_CODE };
+            if (f == null)
+                error("Cannot invoke non-code object");
+            return obj.*f(args);
+        }
+    }
+
+    class JSObject
+    {
+        var attributes;
+
+        function JSObject(var prototype, var constructor, var func_ref [optional], int has_func [opt_flag])
+        {
+            var jsobj_class = class JSObject;
+            var attrs = {
+                ATTR_NAME_PROTOTYPE : prototype,
+                ATTR_NAME_CONSTRUCTOR : constructor
+            };
+            ${ setattr self, jsobj_class, "attributes", attrs };
+            if (has_func)
+                ${ setprop self, PROP_NAME_CODE, func_ref };
+        }
+
+        function get_attr_str[vtable](string key)
+        {
+        }
+
+        function set_attr_str[vtable](string key, var value)
+        {
+        }
+
+        function get_pmc_keyed[vtable](var key)
+        {
+        }
+
+        function set_pmc_keyed[vtable](var key, var value)
+        {
+        }
+
+        function get_pmc_keyed_int[vtable](int key)
+        {
+        }
+
+        function set_pmc_keyed_int[vtable](int key, var value)
+        {
+        }
+    }
+}
