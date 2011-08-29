@@ -9,10 +9,7 @@ Rosella.Test.test_list({
         });
     },
     test_3 : function(t) {
-
+        t.assert.is_null(null);
     }
 })
 
-function a(x) { }
-function b(y) { }
-function c(z) { }
