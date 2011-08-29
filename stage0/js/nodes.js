@@ -407,7 +407,7 @@ def(expr,'CountExpr', {
 
 def(expr,'CallExpr', {
     toWast : function() {
-        var w = getWast("InvokeStatement");
+        var w = getWast("InvokeExpr");
         w.setObject(null);
         w.setName(this.children[0].toWast());
         for (var i = 1; i < this.children.length; i++)

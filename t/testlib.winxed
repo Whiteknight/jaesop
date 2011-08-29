@@ -1,0 +1,25 @@
+
+class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
+{
+    function JavaScriptStage0File(var p [slurpy])
+    {
+        self.TestFile(p:[flat]);
+    }
+
+    function setup_spawn(string jsfilename)
+    {
+        string wxfilename = jsfilename + ".wx_temp";
+        string compile_cmd = sprintf("node ./js2wxst0.js -o %s %s", [wxfilename, jsfilename]);
+        int is_ok = spawnw(compile_cmd);
+        if (!is_ok)
+            die("Could not compile " + jsfilename);
+        return wxfilename;
+    }
+
+    function cleanup_spawn(string filename)
+    {
+        var wxfile = new Rosella.FileSystem.File(filename);
+        if (wxfile.exists())
+            wxfile.delete();
+    }
+}
