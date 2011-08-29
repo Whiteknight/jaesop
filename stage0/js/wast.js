@@ -194,7 +194,7 @@ def(expr, "NewOperator", {
     addOperand : function(a) { this.children.push(a); },
     toWinxed : function() {
         var wx = "new ";
-        if (this.name.nodeType == "Literal")
+        if (this.name.nodeType == "Literal" || this.name.nodeType == "MemberExpr")
             wx += this.name.toWinxed();
         else
             wx += "(" + this.name.toWinxed() + ")";

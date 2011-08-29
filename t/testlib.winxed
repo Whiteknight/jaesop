@@ -9,10 +9,11 @@ class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
     function setup_spawn(string jsfilename)
     {
         string wxfilename = jsfilename + ".wx_temp";
-        string compile_cmd = sprintf("node ./js2wxst0.js -o %s %s", [wxfilename, jsfilename]);
+        var compile_cmd = ["node", "./js2wxst0.js", "-o", wxfilename, jsfilename];
         int is_ok = spawnw(compile_cmd);
+        is_ok = (is_ok >> 8) & 0xFF;
         if (is_ok != 0) {
-            self.mark_test_abort("Could not compile " + jsfilename + " to winxed");
+            self.mark_test_abort(sprintf("Could not compile '%s' to winxed\nCommand: %s", [jsfilename, compile_cmd.join(" ")]));
             return null;
         }
         return wxfilename;
