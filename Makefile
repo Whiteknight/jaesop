@@ -3,7 +3,7 @@ all: build
 build: build-stage0 build-test
 
 test: build-test
-	winxed t/harness
+	winxed --nowarn t/harness
 
 build-stage0: stage0/js/parser.js stage0/runtime/jsobject.pbc
 

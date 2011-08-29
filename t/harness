@@ -11,6 +11,7 @@ namespace Rosella {
     namespace Harness { namespace TestRun { class Factory; }}
     namespace FileSystem { class File; }
 }
+class JavaScriptStage0File;
 
 // Harness Main. Execute tests in directories and display results.
 function harness_main(var args)

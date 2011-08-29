@@ -11,8 +11,10 @@ class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
         string wxfilename = jsfilename + ".wx_temp";
         string compile_cmd = sprintf("node ./js2wxst0.js -o %s %s", [wxfilename, jsfilename]);
         int is_ok = spawnw(compile_cmd);
-        if (!is_ok)
-            die("Could not compile " + jsfilename);
+        if (is_ok != 0) {
+            self.mark_test_abort("Could not compile " + jsfilename + " to winxed");
+            return null;
+        }
         return wxfilename;
     }
 
