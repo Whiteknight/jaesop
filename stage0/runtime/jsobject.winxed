@@ -3,6 +3,7 @@ namespace JavaScript[HLL]
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
     const string ATTR_NAME_ATTRIBUTES = "attributes";
+    const string ATTR_NAME_HATTRIBUTES = "hidden_attributes";
     const string PROP_NAME_CODE = "!!!code!!!";
     const string PROP_NAME_JSFUNC = "!!!jsfunction!!!";
 
@@ -70,29 +71,39 @@ namespace JavaScript[HLL]
 
     class JSObject
     {
-        var attributes;
+        var attributes;          // Attributes that the user can enumerate
+        var hidden_attributes;   // Attributes that cannot be enumerated
 
         function JSObject(var prototype, var constructor, var values [slurpy,named])
         {
             var jsobj_class = class JSObject;
-            var attrs = {
+            var hattrs = {
                 ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
-            for (string name in values)
-                attrs[name] = values[name];
-            ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
+            ${ setattribute self, jsobj_class, ATTR_NAME_HATTRIBUTES, hattrs };
+            ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, values };
         }
 
         function get_attr_str[vtable](string key)
         {
             var jsobj_class = class JSObject;
+
+            // Check the visible attrs. If we have it there, return it.
             var attrs;
             ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             if (exists attrs[key])
                 return attrs[key];
-            if (exists attrs[ATTR_NAME_PROTOTYPE]) {
-                var proto = attrs[ATTR_NAME_PROTOTYPE];
+
+            // Check the hidden attrs. If we have it, return it.
+            var hattrs;
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_HATTRIBUTES };
+            if (exists hattrs[key])
+                return hattrs[key];
+
+            // If not, we can try to look in the prototype
+            if (key != ATTR_NAME_PROTOTYPE && (exists hattrs[ATTR_NAME_PROTOTYPE])) {
+                var proto = hattrs[ATTR_NAME_PROTOTYPE];
                 if (proto != null)
                     return proto.*key;
             }
@@ -102,6 +113,19 @@ namespace JavaScript[HLL]
         function set_attr_str[vtable](string key, var value)
         {
             var jsobj_class = class JSObject;
+
+            // First, if it's the name of a hidden attribute, update that. We
+            // don't want to shadow these. Overwriting "prototype" and
+            // "constructor" hidden attrs is fine. Overwriting others, maybe
+            // not so much.
+            var hattrs;
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_HATTRIBUTES };
+            if (exists hattrs[key]) {
+                hattrs[key] = value;
+                return;
+            }
+
+            // Next, set it like a regular attr, overwriting if necessary.
             var attrs;
             ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             attrs[key] = value;
@@ -117,15 +141,22 @@ namespace JavaScript[HLL]
             self.*(string(key)) = value;
         }
 
-        /*
-        function get_pmc_keyed_int[vtable](int key)
+        function does[vtable](string role)
         {
+            if (role == "hash")
+                return true;
+            return false;
         }
 
-        function set_pmc_keyed_int[vtable](int key, var value)
+        function get_iter[vtable]()
         {
+            var jsobj_class = class JSObject;
+            var attrs;
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            var attrs_iter;
+            ${ iter attrs_iter, attrs };
+            return attrs_iter;
         }
-        */
     }
 
     class JSFunction : JSObject

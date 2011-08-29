@@ -262,13 +262,25 @@ def(stmt,'FunctionDecl', {
 });
 
 // Function expression node
-def(expr,'FunctionExpr', prototypes.FunctionDecl);
+def(expr,'FunctionExpr', {
+    toWast : function() {
+        var w = getWast("ClosureDecl");
+        for (var i = 1; i < this.children.length; i++) {
+            var child = this.children[i];
+            if (child.nodeType == "ParamDecl")
+                w.addArg(child.toWast());
+            else
+                w.addStatement(child.toWast());
+        }
+        return w;
+    }
+});
 
 // Param declaration node
 def(node,'ParamDecl', {
     toWast : function() {
-        var w = getWast("Literal");
-        w.literalValue(this.children[0].name);
+        var w = getWast("ParametersList");
+        this.children.forEach(function(c) { w.addParameter(wastLiteral(c.name)); });
         return w;
     }
 });

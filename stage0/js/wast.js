@@ -27,8 +27,6 @@ var wast = prototypes.base = {
         this.children = [];
         return this;
     },
-    children : [],
-    nodeType : "WastNode",
     clone: function (extend) {
         return beget(this, extend);
     },
@@ -66,32 +64,55 @@ var stmt = prototypes.stmt = wast.clone();
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
     toWinxed: function() {
-        var wx = "namespace JavaScript[HLL]\n{\n";
-        wx += "    function __init_js__[anon,load,init]()\n" +
-              "    {\n" +
+        //var wx = "namespace JavaScript[HLL]\n{\n";
+
+        var wx = "function __init_js__[anon,load,init]()\n" +
+              "{\n" +
               //"        var rosella = load_packfile('rosella/core.pbc');\n" +
               //"        var(Rosella.initialize_rosella)();\n" +
               //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
-              "        load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
-              "    }\n\n";
+              "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+              "}\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
-        return wx + "\n}\n";
+        return wx + "\n";
+    }
+});
+
+def(wast, "ParametersList", {
+    addParameter : function(p) { this.children.push(p); },
+    toWinxed : function() {
+        return this.children.map(function(c) { return c.toWinxed(); }).join(", ");
     }
 });
 
 def(wast, "FunctionDecl", {
-    name : null,
     setName : function(n) { this.name = n; },
-    args : [],
-    addArg : function(a) { this.args.push(a); },
+    addArg : function(a) {
+        if (!this.args)
+            this.args = [];
+        this.args.push(a);
+    },
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function() {
-        var wx = "    function " + this.name.toWinxed() +
-            "[" + this.flags.join(", ") + "] " +
+        var wx = "function " + this.name.toWinxed() +
             "(" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ")\n" +
             "    {\n" +
             this.children.map(function(c) { return "        " + c.toWinxed(); }).join(";\n") +
-            ";\n    }";
+            ";\n}";
+        return wx;
+    }
+});
+
+def(wast, "ClosureDecl", {
+    addArg : function(a) {
+        if (!this.args)
+            this.args = [];
+        this.args.push(a);
+    },
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function() {
+        var wx = "function (" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ") {\n" +
+            this.children.map(function(c) { return "                " + c.toWinxed(); }).join(";\n") + "; }";
         return wx;
     }
 });
@@ -99,18 +120,18 @@ def(wast, "FunctionDecl", {
 def(wast, "MainFunctionDecl", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function() {
-        var wx = "    function __main__[main,anon](var arguments)\n" +
-                 "    {\n" +
-                 "        try {\n";
+        var wx = "function __main__[main,anon](var arguments)\n" +
+                 "{\n" +
+                 "    try {\n";
         wx += this.children.map(function(c) {
-            return "            " + c.toWinxed();
+            return "        " + c.toWinxed();
         }).join(";\n") + ";\n";
-        wx +=    "        } catch (__e__) {\n" +
-                 "            say(__e__.message);\n" +
-                 "            for (string bt in __e__.backtrace_strings())\n" +
-                 "                say(bt);\n" +
-                 "        }\n" +
-                 "    }";
+        wx +=    "    } catch (__e__) {\n" +
+                 "        say(__e__.message);\n" +
+                 "        for (string bt in __e__.backtrace_strings())\n" +
+                 "            say(bt);\n" +
+                 "    }\n" +
+                 "}";
         return wx;
     }
 });
