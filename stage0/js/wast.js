@@ -163,10 +163,24 @@ def(stmt, "VarDecl", {
 
 def(expr, "BinaryOperator", {
     op : "",
-    operator : function(o) { this.op = o; },
-    operands : function(a,b) { this.children.push(a); this.children.push(b); },
+    setOperator : function(o) { this.op = o; },
+    setOperands : function(a,b) { this.children.push(a); this.children.push(b); },
     toWinxed : function() {
         return this.children.map(function(c) { return c.toWinxed(); }).join(" " + this.op + " ");
+    }
+});
+
+def(expr, "UnaryOperator", {
+    op : "",
+    location : "prefix",
+    setLocation : function(l) { this.location = l; },
+    setOperator : function(o) { this.op = o; },
+    setOperand : function(a) { this.children.push(a); },
+    toWinxed : function() {
+        if (this.location == "prefix")
+            return this.op + " " + this.children[0].toWinxed();
+        else if (this.location == "postfix")
+            return this.children[0].toWinxed() + " " + this.op;
     }
 });
 

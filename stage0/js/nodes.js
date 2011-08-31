@@ -364,15 +364,18 @@ def(expr,'ConditionalExpr', {
 
 var unaryExpr = def(expr,'UnaryExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("UnaryOperator");
+        w.setOperator(this.op);
+        w.setOperand(this.children[0].toWast());
+        return w;
     }
 });
 
 var binaryExpr = def(expr,'BinaryExpr', {
     toWast : function() {
         var w = getWast("BinaryOperator");
-        w.operator(this.op);
-        w.operands(this.children[0].toWast(), this.children[1].toWast());
+        w.setOperator(this.op);
+        w.setOperands(this.children[0].toWast(), this.children[1].toWast());
         return w;
     }
 });
