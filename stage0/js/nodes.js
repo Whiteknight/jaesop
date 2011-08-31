@@ -76,9 +76,6 @@ var node = prototypes.base = {
 
 var expr = prototypes.expr = node.clone();
 var stmt = prototypes.stmt = node.clone();
-var binaryExpr = prototypes.binaryExpr = expr.clone();
-var unaryExpr = prototypes.unaryExpr = expr.clone();
-
 
 var def = function def(proto, name, extend, construct) {
     prototypes[name] = proto.clone(extend);
@@ -101,6 +98,7 @@ var def = function def(proto, name, extend, construct) {
         else if (!fn && handlers[evt]) handlers[evt] = [];
         //handlers[evt].push(fn);
     };
+    return prototypes[name];
 }
 
 /* Nodes
@@ -364,15 +362,18 @@ def(expr,'ConditionalExpr', {
     }
 });
 
-def(unaryExpr,'UnaryExpr', {
+var unaryExpr = def(expr,'UnaryExpr', {
     toWast : function() {
         return errorWast(this.nodeType);
     }
 });
 
-def(binaryExpr,'BinaryExpr', {
+var binaryExpr = def(expr,'BinaryExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("BinaryOperator");
+        w.operator(this.op);
+        w.operands(this.children[0].toWast(), this.children[1].toWast());
+        return w;
     }
 });
 
