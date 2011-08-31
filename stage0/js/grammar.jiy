@@ -145,7 +145,7 @@ MemberExpr
     : PrimaryExpr
     | FunctionExpr
     | MemberExpr '[' Expr ']'
-      {{ $$ = yy.Node('MemberExpr',{brackets:true},$1,$3); }}
+      {{ $$ = yy.Node('KeyedIndexExpr',{brackets:true},$1,$3); }}
     | MemberExpr '.' IdentifierName
       {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'raw', value: String($3)})); }}
     | NEW MemberExpr Arguments
@@ -155,7 +155,7 @@ MemberExpr
 MemberExprNoBF
     : PrimaryExprNoBrace
     | MemberExprNoBF '[' Expr ']'
-      {{ $$ = yy.Node('MemberExpr',{brackets:true},$1,$3); }}
+      {{ $$ = yy.Node('KeyedIndexExpr',{brackets:true},$1,$3); }}
     | MemberExprNoBF '.' IdentifierName
       {{ $$ = yy.Node('MemberExpr',{brackets:false},$1,yy.Node('LiteralExpr', {type: 'raw', value: String($3)})); }}
     | NEW MemberExpr Arguments

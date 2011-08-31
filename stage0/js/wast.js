@@ -230,3 +230,10 @@ def(expr, "MemberExpr", {
         return this.children.map(function(c) { return c.toWinxed(); }).join(".");
     }
 });
+
+def(expr, "KeyedIndexExpr", {
+    addKey : function(m) { this.children.push(m); },
+    toWinxed : function() {
+        return this.children[0].toWinxed() + "[" + this.children[1].toWinxed() + "]";
+    }
+});

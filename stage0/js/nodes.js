@@ -446,6 +446,14 @@ def(expr,'MemberExpr', {
     }
 });
 
+def(expr,'KeyedIndexExpr', {
+    toWast : function() {
+        var w = getWast("KeyedIndexExpr");
+        this.children.forEach(function(c) { w.addKey(c.toWast()); });
+        return w;
+    }
+});
+
 def(expr,'InvokeExpr', {
     toWast : function() {
         var w = getWast("InvokeExpr");
