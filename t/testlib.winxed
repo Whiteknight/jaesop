@@ -1,4 +1,5 @@
 
+// Testfile wrapper for testing stage 0 files written in JavaScript
 class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
 {
     function JavaScriptStage0File(var p [slurpy])

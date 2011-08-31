@@ -23,12 +23,20 @@ function harness_main(var args)
     // Default directories. These are executed if none are specified in args
     if (elements(args) == 0) {
         args = [
-            "t/stage0"
+            "t/stage0",
+            "t/stage0_runtime"
         ];
     }
 
-    factory.add_testfile_type("JS Stage 0", class JavaScriptStage0File);
-    factory.add_test_dirs("JS Stage 0", args:[flat], 1:[named("recurse")]);
+    factory.add_testfile_type("t/stage0", class JavaScriptStage0File);
+    for (string path in args) {
+        var parts = split("_", path);
+        if (elements(parts) > 1)
+            factory.add_test_dirs("Winxed", path, 1:[named("recurse")]);
+        else
+            factory.add_test_dirs(string(parts[0]), path, 1:[named("recurse")]);
+    }
+
     var run = factory.create();
     view.add_run(run, 0);
     harness.run(run, view);
