@@ -77,11 +77,12 @@ namespace JavaScript[HLL]
         {
             var jsobj_class = class JSObject;
             var attrs = {
+                ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
             for (string key in values)
                 attrs[key] = values[key];
-            ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, values };
+            ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
         }
 
         function get_attr_str[vtable](string key)
@@ -138,11 +139,13 @@ namespace JavaScript[HLL]
 
         function does[vtable](string role)
         {
-            var rolef = self.*"__DOES_ROLE__";
-            if (rolef != null)
-                return self.*rolef(role);
-            if (role == "hash")
-                return true;
+            var roles = self.*"__DOES_ROLEs__";
+            if (roles == null)
+                return false;
+            for (string r in roles) {
+                if (r == role)
+                    return true;
+            }
             return false;
         }
 
@@ -175,7 +178,8 @@ namespace JavaScript[HLL]
                 string type_name = self.get_type_name();
                 error("Cannot invoke object of type " + type_name);
             }
-            return f(this, args:[flat]);
+            var result = f(this, args:[flat]);
+            return result;
         }
 
         function get_prototype()
@@ -207,31 +211,37 @@ namespace JavaScript[HLL]
         function get_Function_prototype[anon]()
         {
             var p = new JSObject(null, null);
-
-            p.*"toString" = function(var obj) {
-                var code_pmc = obj.*"__CODE_PMC__";
-                return string(code_pmc);
-            };
-
-            p.*"call" = function(var func, var this, var args[slurpy]) {
-                return func(this, args:[flat]);
-            };
-
-            p.*"apply" = function(var func, var this, var args) {
-                return func(this, args:[flat]);
-            };
-
-            p.*"length" = function(var obj) {
-                var code_pmc = obj.*"__CODE_PMC__";
-                return code_pmc.arity();
-            };
-
             return p;
+        }
+
+        function setup_Function_prototype[anon](var p)
+        {
+            using JavaScript.JSObject.box_function;
+
+            p.*"toString" = box_function(function(var obj) {
+                var code_pmc = obj.*"__CODE_PMC__";
+                if (code_pmc != null)
+                    return string(code_pmc);
+                string type_name = obj.get_type_name();
+                string r = "[Object " + type_name + "]";
+                return r;
+            });
+
+            p.*"call" = box_function(function(var func, var this, var args[slurpy]) {
+                return func(this, args:[flat]);
+            });
+
+            p.*"apply" = box_function(function(var func, var this, var args) {
+                return func(this, args:[flat]);
+            });
+
+            p.*"__DOES_ROLES__" = ["hash"];
         }
 
         function Function(var obj, var sub_code)
         {
             obj.*"__CODE_PMC__" = sub_code;
+            obj.*"length" = sub_code.arity();
         }
     }
 
@@ -240,21 +250,18 @@ namespace JavaScript[HLL]
     {
         function get_Object_prototype[anon](var func_proto)
         {
+            using JavaScript.JSObject.box_function;
+
             var p = new JSObject(func_proto, null);
 
-            p.*"hasOwnProperty" = function(var obj, string key) {
+            p.*"hasOwnProperty" = box_function(function(var obj, string key) {
                 var attrs = obj.get_attribute_hash();
                 return exists attrs[key] ? true : false;
-            };
+            });
 
-            p.*"toString" = function(var obj) {
-                string type_name = obj.get_type_name();
-                return "[Object " + type_name + "]";
-            };
-
-            p.*"getPrototypeOf" = function(var obj) {
+            p.*"getPrototypeOf" = box_function(function(var obj) {
                 return obj.get_prototype();
-            };
+            });
 
             return p;
         }
@@ -271,37 +278,36 @@ namespace JavaScript[HLL]
         function get_array_contents[anon](var jsobj)
         {
             var a = get_attribute_hash(jsobj);
-            return a.*"__ARRAY_CONTENTS__";
+            return a["__ARRAY_CONTENTS__"];
         }
 
         function get_Array_prototype[anon](var obj_proto)
         {
+            using JavaScript.JSObject.box_function;
             var p = new JSObject(obj_proto, null);
             var a = p.get_attribute_hash();
 
-            a["__GET_PMC_IDX__"] = function(var obj, int key) {
+            a["__GET_PMC_IDX__"] = box_function(function(var obj, int key) {
                 var c = get_array_contents(obj);
                 return c[key];
-            };
+            });
 
-            a["__SET_PMC_IDX__"] = function(var obj, int key, var value) {
+            a["__SET_PMC_IDX__"] = box_function(function(var obj, int key, var value) {
                 var c = get_attribute_hash(obj);
                 c[key] = value;
                 obj.*"length" = elements(c);
-            };
+            });
 
-            a["__GET_ITER__"] = function(var obj) {
+            a["__GET_ITER__"] = box_function(function(var obj) {
                 // TODO: Actually, we need to iterate over the array contents
                 //       AND the rest of the JSObject attributes
                 var c = get_attribute_hash(obj);
                 var c_iter;
                 ${ iter c_iter, c };
                 return c_iter;
-            };
+            });
 
-            a["__DOES_ROLE__"] = function(var obj, string role) {
-                return (role == "array" || role == "hash") ? true : false;
-            };
+            a["__DOES_ROLES__"] = ["array", "hash"];
         }
 
         function Array(var obj, var args [slurpy])
@@ -325,6 +331,7 @@ namespace JavaScript[HLL]
         func.*"constructor" = func;
         Function(func, Function);
         store_global("Function", func);
+        JavaScript.Function.setup_Function_prototype(func_proto);
         return func_proto, func;
     }
 
