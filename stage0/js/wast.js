@@ -75,9 +75,31 @@ def(wast, "Program", {
               //"        var(Rosella.initialize_rosella)();\n" +
               //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
               "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+              "}\n\n" +
+              "function __main__[main,anon](var arguments)\n" +
+              "{\n" +
+              "    try {\n" +
+              "        __js_main__(arguments);\n" +
+              "    } catch (__e__) {\n" +
+              "        say(__e__.message);\n" +
+              "        for (string bt in __e__.backtrace_strings())\n" +
+              "            say(bt);\n" +
+              "    }\n" +
               "}\n\n";
         wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
         return wx + "\n";
+    }
+});
+
+def(wast, "MainFunctionDecl", {
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function() {
+        var wx = "function __js_main__[anon](var arguments)\n" +
+            "{\n";
+        wx += this.children.map(function(c) {
+            return "    " + c.toWinxed();
+        }).join(";\n") + ";\n}\n\n";
+        return wx;
     }
 });
 
@@ -99,8 +121,8 @@ def(wast, "FunctionDecl", {
     toWinxed : function() {
         var wx = "function " + this.name.toWinxed() +
             "(" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ")\n" +
-            "    {\n" +
-            this.children.map(function(c) { return "        " + c.toWinxed(); }).join(";\n") +
+            "{\n" +
+            this.children.map(function(c) { return "    " + c.toWinxed(); }).join(";\n") +
             ";\n}";
         return wx;
     }
@@ -120,22 +142,10 @@ def(wast, "ClosureDecl", {
     }
 });
 
-def(wast, "MainFunctionDecl", {
-    addStatement : function(s) { this.children.push(s); },
+def(stmt, "ReturnStatement", {
+    addValue : function(v) { this.children.push(v); },
     toWinxed : function() {
-        var wx = "function __main__[main,anon](var arguments)\n" +
-                 "{\n" +
-                 "    try {\n";
-        wx += this.children.map(function(c) {
-            return "        " + c.toWinxed();
-        }).join(";\n") + ";\n";
-        wx +=    "    } catch (__e__) {\n" +
-                 "        say(__e__.message);\n" +
-                 "        for (string bt in __e__.backtrace_strings())\n" +
-                 "            say(bt);\n" +
-                 "    }\n" +
-                 "}";
-        return wx;
+        return "return " + (this.children.length == 1 ? this.children[0].toWinxed() : "");
     }
 });
 
@@ -267,6 +277,15 @@ def(stmt, "WhileStatement", {
     }
 });
 
+def(stmt, "DoWhileStatement", {
+    setCondition : function(c) { this.children[1] = c; },
+    setBlock : function(c) { this.children[0] = c; },
+    toWinxed: function() {
+        return "do " + this.children[0].toWinxed() +
+            " while (" + this.children[1].toWinxed() + ")";
+    }
+});
+
 def(stmt, "IfStatement", {
     setCondition : function(c) { this.children[0] = c; },
     thenStatement : function(s) { this.children[1] = s; },
@@ -304,5 +323,15 @@ def(stmt, "ForInStatement", {
     toWinxed : function() {
         return "for (" + this.children[0].toWinxed() + " in " + this.children[1].toWinxed() + ") "
             + this.children[2].toWinxed();
+    }
+});
+
+def(expr, "ConditionalExpr", {
+    setCondition : function(c) { this.children[0] = c; },
+    setOptions : function(a, b) { this.children[1] = a; this.children[2] = b; },
+    toWinxed : function() {
+        return this.children[0].toWinxed() + " ? " +
+            this.children[1].toWinxed() + " : " +
+            this.children[2].toWinxed();
     }
 });

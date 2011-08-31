@@ -286,7 +286,9 @@ def(node,'ParamDecl', {
 // return statement node
 def(stmt,'ReturnStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ReturnStatement");
+        this.children.forEach(function(c) { w.addValue(c.toWast()); });
+        return w;
     }
 });
 
@@ -360,7 +362,10 @@ def(stmt,'WithStmt', {
 // operators
 def(expr,'ConditionalExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ConditionalExpr");
+        w.setCondition(this.children[0].toWast());
+        w.setOptions(this.children[1].toWast(), this.children[2].toWast());
+        return w;
     }
 });
 
@@ -508,7 +513,10 @@ def(stmt,'WhileStmt', {
 
 def(stmt,'DoWhileStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("DoWhileStatement");
+        w.setBlock(this.children[0].toWast());
+        w.setCondition(this.children[1].toWast());
+        return w;
     }
 });
 
