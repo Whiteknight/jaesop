@@ -62,7 +62,7 @@ namespace JavaScript[HLL]
             if (proto == null)
                 proto = get_prototype(constructor);
             var jsobj = new JSObject(proto, constructor);
-            jsobj.*constructor(args:[flat]);
+            constructor(jsobj, args:[flat]);
             return jsobj;
         }
     }
@@ -164,14 +164,15 @@ namespace JavaScript[HLL]
             var constructor = self.*"constructor";
             if (constructor == null)
                 return "Object";
-            return constructor.*"toString"();
+            var toString = constructor.*"toString";
+            return toString(constructor);
         }
 
         function invoke[vtable](var this, var args [slurpy])
         {
             var f = self.*"__CODE_PMC__";
             if (f == null) {
-                string type_name = (self.*"toString")(self.*"constructor");
+                string type_name = self.get_type_name();
                 error("Cannot invoke object of type " + type_name);
             }
             return f(this, args:[flat]);
@@ -228,9 +229,9 @@ namespace JavaScript[HLL]
             return p;
         }
 
-        function Function[method](var sub_code)
+        function Function(var obj, var sub_code)
         {
-            self.*"__CODE_PMC__" = sub_code;
+            obj.*"__CODE_PMC__" = sub_code;
         }
     }
 
@@ -258,7 +259,7 @@ namespace JavaScript[HLL]
             return p;
         }
 
-        function Object()
+        function Object(var obj)
         {
         }
     }
@@ -276,20 +277,20 @@ namespace JavaScript[HLL]
         function get_Array_prototype[anon](var obj_proto)
         {
             var p = new JSObject(obj_proto, null);
-            var a = get_attribute_hash(p);
+            var a = p.get_attribute_hash();
 
-            a.*"__GET_PMC_IDX__" = function(var obj, int key) {
+            a["__GET_PMC_IDX__"] = function(var obj, int key) {
                 var c = get_array_contents(obj);
                 return c[key];
             };
 
-            a.*"__SET_PMC_IDX__" = function(var obj, int key, var value) {
+            a["__SET_PMC_IDX__"] = function(var obj, int key, var value) {
                 var c = get_attribute_hash(obj);
                 c[key] = value;
                 obj.*"length" = elements(c);
             };
 
-            a.*"__GET_ITER__" = function(var obj) {
+            a["__GET_ITER__"] = function(var obj) {
                 // TODO: Actually, we need to iterate over the array contents
                 //       AND the rest of the JSObject attributes
                 var c = get_attribute_hash(obj);
@@ -298,16 +299,16 @@ namespace JavaScript[HLL]
                 return c_iter;
             };
 
-            a.*"__DOES_ROLE__" = function(var obj, string role) {
+            a["__DOES_ROLE__"] = function(var obj, string role) {
                 return (role == "array" || role == "hash") ? true : false;
             };
         }
 
-        function Array[method](var args [slurpy])
+        function Array(var obj, var args [slurpy])
         {
-            var a = get_attribute_hash(self);
-            a.*"__ARRAY_CONTENTS__" = [];
-            a.*"length" = 0;
+            var a = get_attribute_hash(obj);
+            a["__ARRAY_CONTENTS__"] = [];
+            a["length"] = 0;
         }
     }
 
@@ -315,21 +316,32 @@ namespace JavaScript[HLL]
         Setup the various built-in types
     */
 
-    function __SETUP__[anon,init,load]()
+    function __BOOTSTRAP_FUNCTION__[anon]()
     {
         using JavaScript.Function.Function;
         var func_proto = JavaScript.Function.get_Function_prototype();
-        var func = box_function(func_proto, Function);
+        var func = new JSObject(func_proto, null);
+        ${ setprop Function, PROP_NAME_JSFUNC, func };
+        func.*"constructor" = func;
+        Function(func, Function);
         store_global("Function", func);
+        return func_proto, func;
+    }
+
+    function __SETUP__[anon,init,load]()
+    {
+        var func_proto;
+        var func;
+        :(func_proto, func) = __BOOTSTRAP_FUNCTION__();
 
         using JavaScript.Object.Object;
         var obj_proto = JavaScript.Object.get_Object_prototype(func_proto);
-        var obj = box_func(Object, obj_proto);
+        var obj = JavaScript.JSObject.box_function(Object, obj_proto);
         store_global("Object", obj);
 
         using JavaScript.Array.Array;
         var array_proto = JavaScript.Array.get_Array_prototype(obj_proto);
-        var array = box_func(Array, array_proto);
+        var array = JavaScript.JSObject.box_function(Array, array_proto);
         store_global("Array", obj);
     }
 }
