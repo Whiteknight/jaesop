@@ -514,19 +514,33 @@ def(stmt,'DoWhileStmt', {
 
 def(stmt,'ForStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ForStatement");
+        w.setCondition(this.children[0].toWast(),
+            this.children[1].toWast(),
+            this.children[2].toWast());
+        w.setStatement(this.children[3].toWast());
+        return w;
     }
 });
 
 def(stmt,'ForInStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ForInStatement");
+        w.setEnumerator(this.children[0].toWast(),
+            this.children[1].toWast());
+        w.setStatement(this.children[2].toWast());
+        return w;
     }
 });
 
 def(stmt,'IfStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("IfStatement");
+        w.setCondition(this.children[0].toWast());
+        w.thenStatement(this.children[1].toWast());
+        if (this.children[2].nodeType != "EmptyStmt")
+            w.elseStatement(this.children[2].toWast());
+        return w;
     }
 });
 

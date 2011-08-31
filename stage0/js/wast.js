@@ -267,3 +267,42 @@ def(stmt, "WhileStatement", {
     }
 });
 
+def(stmt, "IfStatement", {
+    setCondition : function(c) { this.children[0] = c; },
+    thenStatement : function(s) { this.children[1] = s; },
+    elseStatement : function(s) { this.children[2] = s; },
+    toWinxed : function() {
+        var wx = "if (" + this.children[0].toWinxed() + ")" +
+            this.children[1].toWinxed();
+        if (this.children.length >= 3)
+            wx += " else " + this.children[2].toWinxed();
+        return wx;
+    }
+});
+
+def(stmt, "ForStatement", {
+    setCondition : function(a, b, c) {
+        this.children[0] = a;
+        this.children[1] = b;
+        this.children[2] = c;
+    },
+    setStatement : function(s) { this.children[3] = s; },
+    toWinxed : function() {
+        return "for (" + this.children[0].toWinxed() + " ; " +
+            this.children[1].toWinxed() + " ; " +
+            this.children[2].toWinxed() + ") " +
+            this.children[3].toWinxed();
+    }
+});
+
+def(stmt, "ForInStatement", {
+    setEnumerator : function(a, b) {
+        this.children[0] = a;
+        this.children[1] = b;
+    },
+    setStatement : function(s) { this.children[2] = s; },
+    toWinxed : function() {
+        return "for (" + this.children[0].toWinxed() + " in " + this.children[1].toWinxed() + ") "
+            + this.children[2].toWinxed();
+    }
+});
