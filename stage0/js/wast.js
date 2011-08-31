@@ -69,25 +69,28 @@ def(wast, "Program", {
     toWinxed: function() {
         //var wx = "namespace JavaScript[HLL]\n{\n";
 
-        var wx = "function __init_js__[anon,load,init]()\n" +
-              "{\n" +
-              //"        var rosella = load_packfile('rosella/core.pbc');\n" +
-              //"        var(Rosella.initialize_rosella)();\n" +
-              //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
-              "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
-              "}\n\n" +
-              "function __main__[main,anon](var arguments)\n" +
-              "{\n" +
-              "    try {\n" +
-              "        __js_main__(arguments);\n" +
-              "    } catch (__e__) {\n" +
-              "        say(__e__.message);\n" +
-              "        for (string bt in __e__.backtrace_strings())\n" +
-              "            say(bt);\n" +
-              "    }\n" +
-              "}\n\n";
-        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n");
-        return wx + "\n";
+        var wx =
+            "namespace JavaScript[HLL] {\n" +
+            "function __init_js__[anon,load,init]()\n" +
+            "{\n" +
+            //"        var rosella = load_packfile('rosella/core.pbc');\n" +
+            //"        var(Rosella.initialize_rosella)();\n" +
+            //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
+            "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+            "}\n\n" +
+            "function __main__[main,anon](var arguments)\n" +
+            "{\n" +
+            "    try {\n" +
+            "        __js_main__(arguments);\n" +
+            "    } catch (__e__) {\n" +
+            "        say(__e__.message);\n" +
+            "        for (string bt in __e__.backtrace_strings())\n" +
+            "            say(bt);\n" +
+            "    }\n" +
+            "}\n\n";
+        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n") + "\n" +
+            "} // JavaScript HLL\n";
+        return wx;
     }
 });
 
@@ -98,7 +101,7 @@ def(wast, "MainFunctionDecl", {
             "{\n";
         wx += this.children.map(function(c) {
             return "    " + c.toWinxed();
-        }).join(";\n") + ";\n}\n\n";
+        }).join(";\n") + ";\n}";
         return wx;
     }
 });
