@@ -212,6 +212,19 @@ namespace JavaScript[HLL]
                 return string(code_pmc);
             };
 
+            p.*"call" = function(var func, var this, var args[slurpy]) {
+                return func(this, args:[flat]);
+            };
+
+            p.*"apply" = function(var func, var this, var args) {
+                return func(this, args:[flat]);
+            };
+
+            p.*"length" = function(var obj) {
+                var code_pmc = obj.*"__CODE_PMC__";
+                return code_pmc.arity();
+            };
+
             return p;
         }
 
@@ -236,6 +249,10 @@ namespace JavaScript[HLL]
             p.*"toString" = function(var obj) {
                 string type_name = obj.get_type_name();
                 return "[Object " + type_name + "]";
+            };
+
+            p.*"getPrototypeOf" = function(var obj) {
+                return obj.get_prototype();
             };
 
             return p;
