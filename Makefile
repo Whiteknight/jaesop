@@ -19,6 +19,7 @@ stage0/runtime/jsobject.pbc: stage0/runtime/jsobject.pir
 stage0/runtime/jsobject.pir: stage0/runtime/jsobject.winxed
 	winxed -c -o stage0/runtime/jsobject.pir stage0/runtime/jsobject.winxed
 
+
 t/testlib.pbc: t/testlib.pir
 	parrot -o t/testlib.pbc t/testlib.pir
 

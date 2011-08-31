@@ -3,10 +3,32 @@ namespace JavaScript[HLL]
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
     const string ATTR_NAME_ATTRIBUTES = "attributes";
-    const string ATTR_NAME_HATTRIBUTES = "hidden_attributes";
-    const string PROP_NAME_CODE = "!!!code!!!";
     const string PROP_NAME_JSFUNC = "!!!jsfunction!!!";
 
+    /* Global value store
+    */
+
+    function global_store()
+    {
+        var store = {};
+        while(1)
+            yield store;
+    }
+
+    function store_global(string name, var jsobj)
+    {
+        global_store()[name] = jsobj;
+    }
+
+    function fetch_global(string name)
+    {
+        return global_store()[name];
+    }
+
+    /* JSObject
+    */
+
+    // JSObject helper methods
     namespace JSObject
     {
         function error(string fmt, var args[slurpy])
@@ -14,96 +36,65 @@ namespace JavaScript[HLL]
             die(sprintf("JSObject: " + fmt, args));
         }
 
-        function get_prototype(var jsobj)
+        function box_function(var f, var proto [optional], int has_proto [opt_flag])
         {
-            int isa_jsobj = 0;
-            var jsobj_class = class JSObject;
-            ${ isa isa_jsobj, jsobj, jsobj_class };
-            if (isa_jsobj) {
-                var proto = null;
-                ${ getattribute proto, jsobj, jsobj_class, ATTR_NAME_PROTOTYPE };
-                return proto;
-            }
-            return null;
-        }
-
-        function get_constructor(var jsobj)
-        {
-            int isa_jsobj = 0;
-            var jsobj_class = class JSObject;
-            ${ isa isa_jsobj, jsobj, jsobj_class };
-            if (isa_jsobj) {
-                var proto = null;
-                ${ getattribute proto, jsobj, jsobj_class, ATTR_NAME_CONSTRUCTOR };
-                return proto;
-            }
-            return null;
-        }
-
-        function box_func(var f)
-        {
-            if (f instanceof JSFunction)
+            if (f instanceof JSObject)
                 return f;
+
             var jsf;
             ${ getprop jsf, PROP_NAME_JSFUNC, f };
-            if (jsf == null)
-                jsf = new JSFunction(f);
+            if (jsf == null) {
+                var function_constructor = fetch_global("Function");
+                jsf = construct_jsobj(proto, function_constructor, f);
+
+                // Cache the JSObject as a property on the Sub, so we don't
+                // try to re-box it later
+                ${ setprop f, PROP_NAME_JSFUNC, jsf };
+            }
             return jsf;
         }
 
-        function construct(var constructor, var args [slurpy])
+        function construct_jsobj(var proto, var constructor, var args [slurpy])
         {
-            var con_proto = get_prototype(constructor);
-            var jsobj = new JSObject(con_proto, constructor);
+            if (!(constructor instanceof JSObject))
+                constructor = box_func(constructor, null);
+
+            if (proto == null)
+                proto = get_prototype(constructor);
+            var jsobj = new JSObject(proto, constructor);
             jsobj.*constructor(args:[flat]);
             return jsobj;
         }
-
-        function invoke(var obj, var args [slurpy])
-        {
-            var f = null;
-            ${ getprop f, PROP_NAME_CODE, obj };
-            if (f == null)
-                error("Cannot invoke non-code object");
-            return obj.*f(args);
-        }
     }
 
+    // JSObject class definition. All objects in JavaScript are JSObjects with
+    // different constructors and prototypes
     class JSObject
     {
-        var attributes;          // Attributes that the user can enumerate
-        var hidden_attributes;   // Attributes that cannot be enumerated
+        var attributes;
 
         function JSObject(var prototype, var constructor, var values [slurpy,named])
         {
             var jsobj_class = class JSObject;
-            var hattrs = {
-                ATTR_NAME_PROTOTYPE : prototype,
+            var attrs = {
                 ATTR_NAME_CONSTRUCTOR : constructor
             };
-            ${ setattribute self, jsobj_class, ATTR_NAME_HATTRIBUTES, hattrs };
+            for (string key in values)
+                attrs[key] = values[key];
             ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, values };
         }
 
         function get_attr_str[vtable](string key)
         {
             var jsobj_class = class JSObject;
-
-            // Check the visible attrs. If we have it there, return it.
             var attrs;
             ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             if (exists attrs[key])
                 return attrs[key];
 
-            // Check the hidden attrs. If we have it, return it.
-            var hattrs;
-            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_HATTRIBUTES };
-            if (exists hattrs[key])
-                return hattrs[key];
-
             // If not, we can try to look in the prototype
-            if (key != ATTR_NAME_PROTOTYPE && (exists hattrs[ATTR_NAME_PROTOTYPE])) {
-                var proto = hattrs[ATTR_NAME_PROTOTYPE];
+            if (key != ATTR_NAME_PROTOTYPE && (exists attrs[ATTR_NAME_PROTOTYPE])) {
+                var proto = attrs[ATTR_NAME_PROTOTYPE];
                 if (proto != null)
                     return proto.*key;
             }
@@ -113,19 +104,6 @@ namespace JavaScript[HLL]
         function set_attr_str[vtable](string key, var value)
         {
             var jsobj_class = class JSObject;
-
-            // First, if it's the name of a hidden attribute, update that. We
-            // don't want to shadow these. Overwriting "prototype" and
-            // "constructor" hidden attrs is fine. Overwriting others, maybe
-            // not so much.
-            var hattrs;
-            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_HATTRIBUTES };
-            if (exists hattrs[key]) {
-                hattrs[key] = value;
-                return;
-            }
-
-            // Next, set it like a regular attr, overwriting if necessary.
             var attrs;
             ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
             attrs[key] = value;
@@ -141,8 +119,28 @@ namespace JavaScript[HLL]
             self.*(string(key)) = value;
         }
 
+        function get_pmc_keyed_int[vtable](int key)
+        {
+            var getf = self.*"__GET_PMC_IDX__";
+            if (getf != null)
+                return self.*getf(key);
+            return self.*(string(key));
+        }
+
+        function set_pmc_keyed_int[vtable](int key, var value)
+        {
+            var setf = self.*"__SET_PMC_IDX__";
+            if (setf != null)
+                self.*setf(key, value);
+            else
+                self.*(string(key)) = value;
+        }
+
         function does[vtable](string role)
         {
+            var rolef = self.*"__DOES_ROLE__";
+            if (rolef != null)
+                return self.*rolef(role);
             if (role == "hash")
                 return true;
             return false;
@@ -150,6 +148,9 @@ namespace JavaScript[HLL]
 
         function get_iter[vtable]()
         {
+            var iterf = self.*"__GET_ITER__";
+            if (iterf != null)
+                return self.*iterf();
             var jsobj_class = class JSObject;
             var attrs;
             ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
@@ -157,15 +158,161 @@ namespace JavaScript[HLL]
             ${ iter attrs_iter, attrs };
             return attrs_iter;
         }
+
+        function get_type_name()
+        {
+            var constructor = self.*"constructor";
+            if (constructor == null)
+                return "Object";
+            return constructor.*"toString"();
+        }
+
+        function invoke[vtable](var this, var args [slurpy])
+        {
+            var f = self.*"__CODE_PMC__";
+            if (f == null) {
+                string type_name = (self.*"toString")(self.*"constructor");
+                error("Cannot invoke object of type " + type_name);
+            }
+            return f(this, args:[flat]);
+        }
+
+        function get_prototype()
+        {
+            return self.*"prototype";
+        }
+
+        function get_constructor()
+        {
+            self.*"constructor";
+        }
+
+        function get_attribute_hash()
+        {
+            var jsobj_class = class JSObject;
+            var attrs;
+            ${ getattribute attrs, self, jsobj_class, ATTR_NAME_ATTRIBUTES };
+            return attrs;
+        }
     }
 
-    class JSFunction : JSObject
+    /* Built-in types
+    */
+
+    // Function is the root type. It provides basic invokable behavior and
+    // a few other details.
+    namespace Function
     {
-        function JSFunction(var func)
+        function get_Function_prototype[anon]()
         {
-            self.JSObject();
-            ${ setprop self, PROP_NAME_CODE, func };
-            ${ setprop func, PROP_NAME_JSFUNC, self };
+            var p = new JSObject(null, null);
+
+            p.*"toString" = function(var obj) {
+                var code_pmc = obj.*"__CODE_PMC__";
+                return string(code_pmc);
+            };
+
+            return p;
         }
+
+        function Function[method](var sub_code)
+        {
+            self.*"__CODE_PMC__" = sub_code;
+        }
+    }
+
+    // Object is what most objects are.
+    namespace Object
+    {
+        function get_Object_prototype[anon](var func_proto)
+        {
+            var p = new JSObject(func_proto, null);
+
+            p.*"hasOwnProperty" = function(var obj, string key) {
+                var attrs = obj.get_attribute_hash();
+                return exists attrs[key] ? true : false;
+            };
+
+            p.*"toString" = function(var obj) {
+                string type_name = obj.get_type_name();
+                return "[Object " + type_name + "]";
+            };
+
+            return p;
+        }
+
+        function Object()
+        {
+        }
+    }
+
+    // Array is for low-level integer-keyed arrays. It's a thick wrapper around
+    // ResizablePMCArray
+    namespace Array
+    {
+        function get_array_contents[anon](var jsobj)
+        {
+            var a = get_attribute_hash(jsobj);
+            return a.*"__ARRAY_CONTENTS__";
+        }
+
+        function get_Array_prototype[anon](var obj_proto)
+        {
+            var p = new JSObject(obj_proto, null);
+            var a = get_attribute_hash(p);
+
+            a.*"__GET_PMC_IDX__" = function(var obj, int key) {
+                var c = get_array_contents(obj);
+                return c[key];
+            };
+
+            a.*"__SET_PMC_IDX__" = function(var obj, int key, var value) {
+                var c = get_attribute_hash(obj);
+                c[key] = value;
+                obj.*"length" = elements(c);
+            };
+
+            a.*"__GET_ITER__" = function(var obj) {
+                // TODO: Actually, we need to iterate over the array contents
+                //       AND the rest of the JSObject attributes
+                var c = get_attribute_hash(obj);
+                var c_iter;
+                ${ iter c_iter, c };
+                return c_iter;
+            };
+
+            a.*"__DOES_ROLE__" = function(var obj, string role) {
+                return (role == "array" || role == "hash") ? true : false;
+            };
+        }
+
+        function Array[method](var args [slurpy])
+        {
+            var a = get_attribute_hash(self);
+            a.*"__ARRAY_CONTENTS__" = [];
+            a.*"length" = 0;
+        }
+    }
+
+    /* Setup routine
+        Setup the various built-in types
+    */
+
+    function __SETUP__[anon,init,load]()
+    {
+        using JavaScript.Function.Function;
+        var func_proto = JavaScript.Function.get_Function_prototype();
+        var func = box_function(func_proto, Function);
+        store_global("Function", func);
+
+        using JavaScript.Object.Object;
+        var obj_proto = JavaScript.Object.get_Object_prototype(func_proto);
+        var obj = box_func(Object, obj_proto);
+        store_global("Object", obj);
+
+        using JavaScript.Array.Array;
+        var array_proto = JavaScript.Array.get_Array_prototype(obj_proto);
+        var array = box_func(Array, array_proto);
+        store_global("Array", obj);
     }
 }
