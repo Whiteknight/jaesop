@@ -45,7 +45,7 @@ namespace JavaScript[HLL]
             ${ getprop jsf, PROP_NAME_JSFUNC, f };
             if (jsf == null) {
                 var function_constructor = fetch_global("Function");
-                jsf = construct_jsobj(proto, function_constructor, f);
+                jsf = construct(proto, function_constructor, f);
 
                 // Cache the JSObject as a property on the Sub, so we don't
                 // try to re-box it later
@@ -54,15 +54,17 @@ namespace JavaScript[HLL]
             return jsf;
         }
 
-        function construct_jsobj(var proto, var constructor, var args [slurpy])
+        function construct(var proto, var constructor,
+                var constr_args [slurpy],
+                var jsobj_values [slurpy,named])
         {
             if (!(constructor instanceof JSObject))
                 constructor = box_func(constructor, null);
 
             if (proto == null)
                 proto = get_prototype(constructor);
-            var jsobj = new JSObject(proto, constructor);
-            constructor(jsobj, args:[flat]);
+            var jsobj = new JSObject(proto, constructor, jsobj_values:[flat,named]);
+            constructor(jsobj, constr_args:[flat]);
             return jsobj;
         }
     }
@@ -76,6 +78,8 @@ namespace JavaScript[HLL]
         function JSObject(var prototype, var constructor, var values [slurpy,named])
         {
             var jsobj_class = class JSObject;
+            if (prototype == null && constructor != null)
+                prototype = constructor.*"prototype";
             var attrs = {
                 ATTR_NAME_PROTOTYPE : prototype,
                 ATTR_NAME_CONSTRUCTOR : constructor
@@ -84,6 +88,10 @@ namespace JavaScript[HLL]
                 attrs[key] = values[key];
             ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
         }
+
+        /* VTABLES
+            These implement most of the JS-visible behaviors of JSObject
+        */
 
         function get_attr_str[vtable](string key)
         {
@@ -162,15 +170,6 @@ namespace JavaScript[HLL]
             return attrs_iter;
         }
 
-        function get_type_name()
-        {
-            var constructor = self.*"constructor";
-            if (constructor == null)
-                return "Object";
-            var toString = constructor.*"toString";
-            return toString(constructor);
-        }
-
         function invoke[vtable](var this, var args [slurpy])
         {
             var f = self.*"__CODE_PMC__";
@@ -180,6 +179,20 @@ namespace JavaScript[HLL]
             }
             var result = f(this, args:[flat]);
             return result;
+        }
+
+        /* Helper Methods
+            These methods are for internal use only. They are not visible from
+            JS code. Methods callable from JS are stored in the attrs hash.
+        */
+
+        function get_type_name()
+        {
+            var constructor = self.*"constructor";
+            if (constructor == null)
+                return "Object";
+            var toString = constructor.*"toString";
+            return toString(constructor);
         }
 
         function get_prototype()
