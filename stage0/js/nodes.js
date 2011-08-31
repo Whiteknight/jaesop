@@ -179,6 +179,8 @@ def(stmt,'VarDecl', {
         if (node.nodeType == "InitPatt") {
             w.setName(node.children[0].toWast());
             w.setInitializer(node.children[1].toWast());
+        } else if (node.nodeType == "IdPatt") {
+            w.setName(wastLiteral(node.name));
         } else {
             w = errorWast("VarDecl child " + node.nodeType + " cannot be converted to wast");
         }
