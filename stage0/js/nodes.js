@@ -209,8 +209,8 @@ def(expr,'IdExpr', {
 def(expr,'AssignExpr', {
     toWast : function() {
         var w = getWast("BinaryOperator");
-        w.operator("=");
-        w.operands(this.children[0].toWast(), this.children[1].toWast());
+        w.setOperator("=");
+        w.setOperands(this.children[0].toWast(), this.children[1].toWast());
         return w;
     }
 });
@@ -298,7 +298,9 @@ def(stmt,'TryStmt', {
 
 def(stmt,'BlockStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("StatementBlock");
+        this.children.forEach(function(c) { w.addStatement(c.toWast()); });
+        return w;
     }
 });
 
@@ -417,7 +419,11 @@ def(unaryExpr,'TypeofExpr', {op: 'typeof'});
 
 def(expr,'CountExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("UnaryOperator");
+        w.setOperator(this.op);
+        w.setLocation("postfix");
+        w.setOperand(this.children[0].toWast());
+        return w;
     }
 });
 
@@ -493,7 +499,10 @@ def(stmt,'EmptyStmt', {
 
 def(stmt,'WhileStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("WhileStatement");
+        w.setCondition(this.children[0].toWast());
+        w.setBlock(this.children[1].toWast());
+        return w;
     }
 });
 

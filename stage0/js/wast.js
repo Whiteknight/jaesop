@@ -1,6 +1,9 @@
 var sys = require("sys");
 var prototypes = exports.prototypes = [];
 var constructors = exports.constructors = [];
+var FUNC_INDENT = "";
+var STMT_INDENT = "        ";
+var BLCK_INDENT = "            ";
 
 function extend (base, ext, except) {
     for (var k in ext) {
@@ -143,8 +146,12 @@ def(expr, "Literal", {
 });
 
 def(wast, "StatementBlock", {
-    statements : [],
-    addStatement : function(s) { this.statements.push(s); }
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function() {
+        return "{\n            " +
+            this.children.map(function(c) { return c.toWinxed(); }).join(";\n            ") +
+            ";\n        }";
+    }
 });
 
 def(stmt, "VarDecl", {
@@ -180,7 +187,7 @@ def(expr, "UnaryOperator", {
         if (this.location == "prefix")
             return this.op + " " + this.children[0].toWinxed();
         else if (this.location == "postfix")
-            return this.children[0].toWinxed() + " " + this.op;
+            return this.children[0].toWinxed() + this.op;
     }
 });
 
@@ -251,3 +258,12 @@ def(expr, "KeyedIndexExpr", {
         return this.children[0].toWinxed() + "[" + this.children[1].toWinxed() + "]";
     }
 });
+
+def(stmt, "WhileStatement", {
+    setCondition : function(c) { this.children[0] = c; },
+    setBlock : function(c) { this.children[1] = c; },
+    toWinxed: function() {
+        return "while (" + this.children[0].toWinxed() + ") " + this.children[1].toWinxed();
+    }
+});
+
