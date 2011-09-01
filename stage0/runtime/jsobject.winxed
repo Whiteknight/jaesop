@@ -31,11 +31,15 @@ namespace JavaScript[HLL]
     // JSObject helper methods
     namespace JSObject
     {
+        // Helper method to throw helpful errors
         function error(string fmt, var args[slurpy])
         {
             die(sprintf("JSObject: " + fmt, args));
         }
 
+        // Box a native Parrot Sub PMC into a JSObject with Function
+        // prototype/constructor. Allows setting a custom prototype if one
+        // is available.
         function box_function(var f, var proto [optional], int has_proto [opt_flag])
         {
             if (f instanceof JSObject)
@@ -60,7 +64,6 @@ namespace JavaScript[HLL]
         {
             if (!(constructor instanceof JSObject))
                 constructor = box_func(constructor, null);
-
             if (proto == null)
                 proto = get_prototype(constructor);
             var jsobj = new JSObject(proto, constructor, jsobj_values:[flat,named]);
