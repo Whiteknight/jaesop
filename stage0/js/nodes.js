@@ -253,7 +253,7 @@ def(stmt,'FunctionDecl', {
         for (var i = 1; i < this.children.length; i++) {
             var child = this.children[i];
             if (child.nodeType == "ParamDecl")
-                w.addArg(child.toWast());
+                w.setArguments(child.toWast());
             else
                 w.addStatement(child.toWast());
         }

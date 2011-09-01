@@ -80,7 +80,20 @@ def(wast, "Program", {
             "}\n\n" +
             "function __main__[main,anon](var arguments)\n" +
             "{\n" +
-            "    try {\n" +
+            "    using JSObject.box_function;\n" +
+            "    using store_global;\n" +
+            "    try {\n";
+            "       var __f;\n";
+        wx += this.children.map(function(c) {
+            if (c.name != null) {
+                var name = c.name.toWinxed();
+                return "        using " + name + ";\n" +
+                    "        __f = box_function(" + name + ");\n" +
+                    "        store_global('" + name + "', __f);\n";
+            } else
+                return "";
+        }).join("\n");
+        wx +=
             "        __js_main__(arguments);\n" +
             "    } catch (__e__) {\n" +
             "        say(__e__.message);\n" +
@@ -109,21 +122,19 @@ def(wast, "MainFunctionDecl", {
 def(wast, "ParametersList", {
     addParameter : function(p) { this.children.push(p); },
     toWinxed : function() {
-        return this.children.map(function(c) { return c.toWinxed(); }).join(", ");
+        if (this.children.length == 0)
+            return "this";
+        return "this, " + this.children.map(function(c) { return c.toWinxed(); }).join(", ");
     }
 });
 
 def(wast, "FunctionDecl", {
     setName : function(n) { this.name = n; },
-    addArg : function(a) {
-        if (!this.args)
-            this.args = [];
-        this.args.push(a);
-    },
+    setArguments : function(a) { this.args = a; },
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function() {
-        var wx = "function " + this.name.toWinxed() +
-            "(" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ")\n" +
+        var wx = "function " + this.name.toWinxed() + "[anon]" +
+            "(" + this.args.toWinxed() + ")\n" +
             "{\n" +
             this.children.map(function(c) { return "    " + c.toWinxed(); }).join(";\n") +
             ";\n}";
