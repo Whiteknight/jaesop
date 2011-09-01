@@ -19,6 +19,11 @@ something else.
 Currently, I only have a stage zero compiler, and it's only partially
 implemented.
 
+=== REQUIREMENTS ===
+
+You need a modern Parrot and Winxed installed, with Rosella. You need node.js
+and jison.
+
 === USAGE ===
 
 To build the stage0 compiler and stage0 runtime, do this:
@@ -37,6 +42,10 @@ If you are hacking and want to see the AST and WAST structures, you can use
 the --astdebug option:
 
     node js2wxst0.js --astdebug input.js
+
+To run the automated test suite:
+
+    make test
 
 
 
