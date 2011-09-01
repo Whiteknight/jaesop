@@ -210,9 +210,9 @@ def(expr,'IdExpr', {
 // Assignment expression node
 def(expr,'AssignExpr', {
     toWast : function() {
-        var w = getWast("BinaryOperator");
-        w.setOperator("=");
-        w.setOperands(this.children[0].toWast(), this.children[1].toWast());
+        var w = getWast("Assignment");
+        w.setDestination(this.children[0].toWast());
+        w.setValue(this.childen[1].toWast());
         return w;
     }
 });
@@ -280,7 +280,11 @@ def(expr,'FunctionExpr', {
 def(node,'ParamDecl', {
     toWast : function() {
         var w = getWast("ParametersList");
-        this.children.forEach(function(c) { w.addParameter(wastLiteral(c.name)); });
+        this.children.forEach(function(c) {
+            var n = getWast("ParameterDeclare");
+            n.setName(c.name);
+            w.addParameter(n);
+        });
         return w;
     }
 });

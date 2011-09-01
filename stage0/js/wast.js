@@ -4,6 +4,21 @@ var constructors = exports.constructors = [];
 var FUNC_INDENT = "";
 var STMT_INDENT = "        ";
 var BLCK_INDENT = "            ";
+var FUNC_ENTRY = "    using fetch_global;\n" +
+                 "    var __OBJECT_CONSTRUCTOR__ = fetch_global('Object');\n";
+
+function SymbolTable(p) {
+    this.syms = { };
+    this.parent = p;
+}
+SymbolTable.prototype.addSymbol = function(s) { this.syms[s] = 1; };
+SymbolTable.prototype.findSymbol = function(s) {
+    if (s in this.syms)
+        return true;
+    if (this.parent != null)
+        return this.parent.findSymbol;
+    return false;
+};
 
 function extend (base, ext, except) {
     for (var k in ext) {
@@ -35,7 +50,8 @@ var wast = prototypes.base = {
     },
 
     winxedValue : function(v) { w.literalValue = v; },
-    toWinxed : function() { return "[!!! Wast error: " + this.nodeType + " has no .toWinxed() method !!!]"; }
+    toWinxed : function(g, l) { return "[!!! Wast error: " + this.nodeType + " has no .toWinxed() method !!!]"; },
+    toWinxedError : function(msg) { return "[!!! Wast error: " + msg + " !!!]"; }
 }
 
 var def = function def(proto, name, extend, construct) {
@@ -68,7 +84,7 @@ def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
     toWinxed: function() {
         //var wx = "namespace JavaScript[HLL]\n{\n";
-
+        var g = new SymbolTable(null);
         var wx =
             "namespace JavaScript[HLL] {\n" +
             "function __init_js__[anon,load,init]()\n" +
@@ -86,7 +102,7 @@ def(wast, "Program", {
             "       var __f;\n";
         wx += this.children.map(function(c) {
             if (c.name != null) {
-                var name = c.name.toWinxed();
+                var name = c.name.toWinxed(g, null);
                 return "        using " + name + ";\n" +
                     "        __f = box_function(" + name + ");\n" +
                     "        store_global('" + name + "', __f);\n";
@@ -101,7 +117,7 @@ def(wast, "Program", {
             "            say(bt);\n" +
             "    }\n" +
             "}\n\n";
-        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n") + "\n" +
+        wx += this.children.map(function(c) { return c.toWinxed(g, null); }).join("\n\n") + "\n" +
             "} // JavaScript HLL\n";
         return wx;
     }
@@ -109,22 +125,14 @@ def(wast, "Program", {
 
 def(wast, "MainFunctionDecl", {
     addStatement : function(s) { this.children.push(s); },
-    toWinxed : function() {
-        var wx = "function __js_main__[anon](var arguments)\n" +
-            "{\n";
-        wx += this.children.map(function(c) {
-            return "    " + c.toWinxed();
-        }).join(";\n") + ";\n}";
+    toWinxed : function(g, l) {
+        l = new SymbolTable(l);
+        var wx = "function __js_main__[anon](var argumentss)\n" +
+            "{\n" +
+            FUNC_ENTRY +
+            this.children.map(function(c) { return "    " + c.toWinxed(g, l); }).join(";\n") +
+            ";\n}";
         return wx;
-    }
-});
-
-def(wast, "ParametersList", {
-    addParameter : function(p) { this.children.push(p); },
-    toWinxed : function() {
-        if (this.children.length == 0)
-            return "this";
-        return "this, " + this.children.map(function(c) { return c.toWinxed(); }).join(", ");
     }
 });
 
@@ -132,11 +140,14 @@ def(wast, "FunctionDecl", {
     setName : function(n) { this.name = n; },
     setArguments : function(a) { this.args = a; },
     addStatement : function(s) { this.children.push(s); },
-    toWinxed : function() {
-        var wx = "function " + this.name.toWinxed() + "[anon]" +
-            "(" + this.args.toWinxed() + ")\n" +
+    toWinxed : function(g, l) {
+        l = new SymbolTable(l);
+        var wx = "function " + this.name.toWinxed(g, l) + "[anon]" +
+            "(" + this.args.toWinxed(g, l) + ")\n" +
             "{\n" +
-            this.children.map(function(c) { return "    " + c.toWinxed(); }).join(";\n") +
+            FUNC_ENTRY;
+        var stmts = this.children.map(function(c) { return "    " + c.toWinxed(g, l); }).join(";\n");
+            // TODO: Iterate over the global symbol table and output code to fetch each and store locally
             ";\n}";
         return wx;
     }
@@ -149,9 +160,10 @@ def(wast, "ClosureDecl", {
         this.args.push(a);
     },
     addStatement : function(s) { this.children.push(s); },
-    toWinxed : function() {
-        var wx = "function (" + this.args.map(function(a) { return a.toWinxed(); }).join(", ") + ") {\n" +
-            this.children.map(function(c) { return "                " + c.toWinxed(); }).join(";\n") + "; }";
+    toWinxed : function(g, l) {
+        var l = new SymbolTable(l);
+        var wx = "function (" + this.args.map(function(a) { return a.toWinxed(g, l); }).join(", ") + ") {\n" +
+            this.children.map(function(c) { return "                " + c.toWinxed(g, l); }).join(";\n") + "; }";
         return wx;
     }
 });
@@ -169,24 +181,64 @@ def(expr, "Literal", {
     toWinxed : function() { return this.value; }
 });
 
+def(wast, "ParametersList", {
+    addParameter : function(p) { this.children.push(p); },
+    toWinxed : function(g, l) {
+        if (this.children.length == 0)
+            return "this";
+        return "this, " +
+            this.children.map(function(c) { return c.toWinxed(g, l); }).join(", ");
+    }
+});
+
+def(wast, "ParameterDeclare", {
+    setName : function(n) { this.name = n; },
+    toWinxed : function(g, l) {
+        l.addSymbol(this.name.toString());
+        return this.name.toString();
+    }
+});
+
+def(stmt, "VariableDeclare", {
+    initializer : null,
+    setName : function(n) { this.name = n; },
+    setInitializer : function(i) { this.initializer = i; },
+    toWinxed : function(g, l) {
+        string n = this.name.toWinxed(g, l);
+        var wx =  "var " + n;
+        if (this.initializer != null)
+            wx += " = " + this.initializer.toWinxed(g, l);
+        l.addSymbol(n);
+        return wx;
+    }
+});
+
+def(expr, "VariableName", {
+    setName : function(n) { this.name = n; },
+    toWinxed : function(g, l) {
+        return this.name.toString();
+    }
+});
+
 def(wast, "StatementBlock", {
     addStatement : function(s) { this.children.push(s); },
-    toWinxed : function() {
+    toWinxed : function(g, l) {
+        l = new SymbolTable(l);
         return "{\n            " +
-            this.children.map(function(c) { return c.toWinxed(); }).join(";\n            ") +
+            this.children.map(function(c) { return c.toWinxed(g, l); }).join(";\n            ") +
             ";\n        }";
     }
 });
 
-def(stmt, "VarDecl", {
-    name : "",
-    initializer : null,
-    setName : function(n) { this.name = n; },
-    setInitializer : function(i) { this.initializer = i; },
-    toWinxed : function() {
-        var wx =  "var " + this.name.toWinxed();
-        if (this.initializer != null) {
-            wx += " = " + this.initializer.toWinxed();
+def(expr, "Assignment", {
+    setDestination : function(d) { this.children[0] = d; },
+    setValue : function(v) { this.children[1] = v; },
+    toWinxed : function(g, l) {
+        var c1 = this.children[0].toWinxed(g, l);
+        var wx = c1 + " = " + this.children[1].toWinxed();
+        if (this.children[0].nodeType == "VariableName") {
+            if (!l.findSymbol(c1) && g.findSymbol(c1))
+                wx += "; __store_global('" + c1 + "', " + c1 + ")";
         }
         return wx;
     }
@@ -196,8 +248,8 @@ def(expr, "BinaryOperator", {
     op : "",
     setOperator : function(o) { this.op = o; },
     setOperands : function(a,b) { this.children.push(a); this.children.push(b); },
-    toWinxed : function() {
-        return this.children.map(function(c) { return c.toWinxed(); }).join(" " + this.op + " ");
+    toWinxed : function(g, l) {
+        return this.children.map(function(c) { return c.toWinxed(g, l); }).join(" " + this.op + " ");
     }
 });
 
@@ -207,27 +259,28 @@ def(expr, "UnaryOperator", {
     setLocation : function(l) { this.location = l; },
     setOperator : function(o) { this.op = o; },
     setOperand : function(a) { this.children.push(a); },
-    toWinxed : function() {
+    toWinxed : function(g, l) {
         if (this.location == "prefix")
-            return this.op + " " + this.children[0].toWinxed();
+            return this.op + " " + this.children[0].toWinxed(g, l);
         else if (this.location == "postfix")
-            return this.children[0].toWinxed() + this.op;
+            return this.children[0].toWinxed(g, l) + this.op;
     }
 });
 
 def(expr, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
-    toWinxed : function() {
-        return "new JSArray(" + this.children.map(function(c) { return c.toWinxed(); }).join(", ") + ")";
+    toWinxed : function(g, l) {
+        // TODO: Need to redo this to fetch the Array constructor
+        "new JSArray(" + this.children.map(function(c) { return c.toWinxed(g, l); }).join(", ") + ")";
     }
 });
 
 def(expr, "jsObjectLiteral", {
     addElement : function(n, e) { this.children[n] = e; },
-    toWinxed : function() {
-        var wx = "new JavaScript.JSObject(null, null";
+    toWinxed : function(g, l) {
+        var wx = "new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__";
         for (var key in this.children)
-            wx += ", " + this.children[key].toWinxed() + ":[named('" + key.toString() + "')]";
+            wx += ", " + this.children[key].toWinxed(g, l) + ":[named('" + key.toString() + "')]";
         return wx + ")";
     }
 });
@@ -238,7 +291,7 @@ def(expr, "InvokeExpr", {
     setObject : function(o) { this.object = o; },
     setName : function(n) { this.name = n; },
     addArgument : function(a) { this.children.push(a); },
-    toWinxed : function() {
+    toWinxed : function(g, l) {
         var wx = "";
         if (this.object != null) {
             if (this.object.nodeType == "Literal" || this.object.nodeType == "MemberExpr")

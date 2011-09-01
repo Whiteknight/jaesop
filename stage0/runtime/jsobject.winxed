@@ -8,21 +8,21 @@ namespace JavaScript[HLL]
     /* Global value store
     */
 
-    function global_store()
+    function __global_store[anon]()
     {
         var store = {};
         while(1)
             yield store;
     }
 
-    function store_global(string name, var jsobj)
+    function __store_global(string name, var jsobj)
     {
-        global_store()[name] = jsobj;
+        __global_store()[name] = jsobj;
     }
 
-    function fetch_global(string name)
+    function __fetch_global(string name)
     {
-        return global_store()[name];
+        return __global_store()[name];
     }
 
     /* JSObject
@@ -48,7 +48,7 @@ namespace JavaScript[HLL]
             var jsf;
             ${ getprop jsf, PROP_NAME_JSFUNC, f };
             if (jsf == null) {
-                var function_constructor = fetch_global("Function");
+                var function_constructor = __fetch_global("Function");
                 jsf = construct(proto, function_constructor, f);
 
                 // Cache the JSObject as a property on the Sub, so we don't
@@ -346,7 +346,7 @@ namespace JavaScript[HLL]
         ${ setprop Function, PROP_NAME_JSFUNC, func };
         func.*"constructor" = func;
         Function(func, Function);
-        store_global("Function", func);
+        __store_global("Function", func);
         JavaScript.Function.setup_Function_prototype(func_proto);
         return func_proto, func;
     }
@@ -360,11 +360,11 @@ namespace JavaScript[HLL]
         using JavaScript.Object.Object;
         var obj_proto = JavaScript.Object.get_Object_prototype(func_proto);
         var obj = JavaScript.JSObject.box_function(Object, obj_proto);
-        store_global("Object", obj);
+        __store_global("Object", obj);
 
         using JavaScript.Array.Array;
         var array_proto = JavaScript.Array.get_Array_prototype(obj_proto);
         var array = JavaScript.JSObject.box_function(Array, array_proto);
-        store_global("Array", obj);
+        __store_global("Array", obj);
     }
 }
