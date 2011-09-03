@@ -108,7 +108,7 @@ def(wast, "Program", {
         //var wx = "namespace JavaScript[HLL]\n{\n";
         var st = new SymbolTable(null);
         var wx =
-            "namespace JavaScript[HLL] {\n" +
+            //"namespace JavaScript[HLL] {\n" +
             "function __init_js__[anon,load,init]()\n" +
             "{\n" +
             //"        var rosella = load_packfile('rosella/core.pbc');\n" +
@@ -140,8 +140,8 @@ def(wast, "Program", {
             "            say(bt);\n" +
             "    }\n" +
             "}\n\n";
-        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n") + "\n" +
-            "} // JavaScript HLL\n";
+        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n") + "\n";
+        //wx += "} // JavaScript HLL\n";
         return wx;
     }
 });
@@ -155,6 +155,8 @@ def(wast, "MainFunctionDecl", {
             "{\n" +
             FUNC_ENTRY;
         var stmts = this.children.map(function(c) { return STMT_INDENT + c.toWinxed(st); }).join(";\n");
+        for (var gul in st.globals_seen_locally)
+            wx += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
         wx += stmts +
             ";\n}";
         return wx;
@@ -238,16 +240,20 @@ def(stmt, "VariableDeclare", {
     setName : function(n) { this.name = n; },
     setInitializer : function(i) { this.initializer = i; },
     toWinxed : function(st) {
-
         var n = this.name.name;
-        var wx =  "var " + n;
+        var wx = "";
 
-        if (this.initializer != null)
-            wx += " = " + this.initializer.toWinxed(st);
-        if (st.declare_vars_locally)
+        if (st.declare_vars_locally == true) {
+            // In a normal function. Declare the variable like normal.
+            wx = "var " + n;
+            if (this.initializer != null)
+                wx += " = " + this.initializer.toWinxed(st);
             st.addLocal(n);
-        else {
-            wx += "; __store_global('" + n + "', " + n + ")";
+        } else {
+            // In the top-level scope. The variable is already declared as a
+            // global. Initialize it if necessary, otherwise do nothing.
+            if (this.initializer != null)
+                wx += n + " = " + this.initializer.toWinxed(st) + "; __store_global('" + n + "', " + n + ")";
             st.addGlobal(n);
         }
         return wx;
@@ -336,7 +342,7 @@ def(expr, "SubInvokeExpr", {
     toWinxed : function(st) {
         var wx = "";
         wx += this.name.toWinxed(st) + "(" +
-            this.children.map(function(c) { return "\n" + ARG_INDENT + c.toWinxed(st); }).join(",") +
+            this.children.map(function(c) { return c.toWinxed(st); }).join(",\n" + ARG_INDENT) +
             ")";
         return wx;
     }

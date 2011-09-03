@@ -1,4 +1,4 @@
-namespace JavaScript[HLL]
+namespace JavaScript
 {
     const string ATTR_NAME_PROTOTYPE = "prototype";
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
@@ -67,7 +67,7 @@ namespace JavaScript[HLL]
             if (proto == null)
                 proto = get_prototype(constructor);
             var jsobj = new JSObject(proto, constructor, jsobj_values:[flat,named]);
-            constructor(jsobj, constr_args:[flat]);
+            constructor(constr_args:[flat], jsobj:[named('this')]);
             return jsobj;
         }
     }
@@ -173,14 +173,14 @@ namespace JavaScript[HLL]
             return attrs_iter;
         }
 
-        function invoke[vtable](var this, var args [slurpy])
+        function invoke[vtable](var args [slurpy], var this [named('this'),optional])
         {
             var f = self.*"__CODE_PMC__";
             if (f == null) {
                 string type_name = self.get_type_name();
                 error("Cannot invoke object of type " + type_name);
             }
-            var result = f(this, args:[flat]);
+            var result = f(args:[flat], this:[named('this')]);
             return result;
         }
 
@@ -244,20 +244,20 @@ namespace JavaScript[HLL]
             });
 
             p.*"call" = box_function(function(var func, var this, var args[slurpy]) {
-                return func(this, args:[flat]);
+                return func(args:[flat], this:[named('this')]);
             });
 
             p.*"apply" = box_function(function(var func, var this, var args) {
-                return func(this, args:[flat]);
+                return func(args:[flat], this:[named('this')]);
             });
 
             p.*"__DOES_ROLES__" = ["hash"];
         }
 
-        function Function(var obj, var sub_code)
+        function Function(var sub_code, var this [named('this')])
         {
-            obj.*"__CODE_PMC__" = sub_code;
-            obj.*"length" = sub_code.arity();
+            this.*"__CODE_PMC__" = sub_code;
+            this.*"length" = sub_code.arity();
         }
     }
 
@@ -282,7 +282,7 @@ namespace JavaScript[HLL]
             return p;
         }
 
-        function Object(var obj)
+        function Object(var this [named('this')])
         {
         }
     }
@@ -326,9 +326,9 @@ namespace JavaScript[HLL]
             a["__DOES_ROLES__"] = ["array", "hash"];
         }
 
-        function Array(var obj, var args [slurpy])
+        function Array(var args [slurpy], var this [named('this')])
         {
-            var a = get_attribute_hash(obj);
+            var a = get_attribute_hash(this);
             a["__ARRAY_CONTENTS__"] = [];
             a["length"] = 0;
         }
@@ -345,7 +345,7 @@ namespace JavaScript[HLL]
         var func = new JSObject(func_proto, null);
         ${ setprop Function, PROP_NAME_JSFUNC, func };
         func.*"constructor" = func;
-        Function(func, Function);
+        Function(Function, func:[named('this')]);
         __store_global("Function", func);
         JavaScript.Function.setup_Function_prototype(func_proto);
         return func_proto, func;
