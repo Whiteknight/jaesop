@@ -1,5 +1,9 @@
 load_bytecode("rosella/test.pbc");
-Rosella.Test.test_list({
+load_bytecode("./stage0/runtime/jsobject.pbc");
+WX->using Rosella.Test.test_list;
+
+// Test to show we can do basic testing with Rosella
+test_list({
     test_1 : function(t) {
         t.assert.equal(0, 0);
     },
@@ -11,5 +15,5 @@ Rosella.Test.test_list({
     test_3 : function(t) {
         t.assert.is_null(null);
     }
-})
+});
 

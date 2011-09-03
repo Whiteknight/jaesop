@@ -2,7 +2,8 @@ var sys = require("sys");
 var prototypes = exports.prototypes = [];
 var constructors = exports.constructors = [];
 var FUNC_INDENT = "";
-var STMT_INDENT = "        ";
+var STMT_INDENT = "    ";
+var ARG_INDENT =  "        ";
 var BLCK_INDENT = "            ";
 var FUNC_ENTRY = "    using JavaScript.__fetch_global;\n" +
                  "    using JavaScript.__store_global;\n" +
@@ -153,7 +154,7 @@ def(wast, "MainFunctionDecl", {
         var wx = "function __js_main__[anon](var argumentss)\n" +
             "{\n" +
             FUNC_ENTRY;
-        var stmts = this.children.map(function(c) { return "    " + c.toWinxed(st); }).join(";\n");
+        var stmts = this.children.map(function(c) { return STMT_INDENT + c.toWinxed(st); }).join(";\n");
         wx += stmts +
             ";\n}";
         return wx;
@@ -171,10 +172,10 @@ def(wast, "FunctionDecl", {
         var wx = "function " + this_name + "[anon] (" + this.args.toWinxed(st) + ")\n" +
             "{\n" +
             FUNC_ENTRY;
-        var stmts = this.children.map(function(c) { return "    " + c.toWinxed(st); }).join(";\n");
+        var stmts = this.children.map(function(c) { return STMT_INDENT + c.toWinxed(st); }).join(";\n");
         for (var gul in st.globals_seen_locally) {
             if (gul != this_name)
-                wx += "    var " + gul + " = __fetch_global('" + gul + "');\n";
+                wx += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
         }
         wx += stmts +
             ";\n}";
@@ -192,9 +193,9 @@ def(wast, "ClosureDecl", {
     toWinxed : function(st) {
         st = new SymbolTable(st);
         var wx = "function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {";
-        var stmts = this.children.map(function(c) { return "\n            " + c.toWinxed(st); }).join(";");
+        var stmts = this.children.map(function(c) { return "\n" + BLCK_INDENT + c.toWinxed(st); }).join(";");
         for (var gsl in st.globals_seen_locally)
-            wx += "            var " + gsl + " = __fetch_global('" + gsl + "');\n";
+            wx += BLCK_INDENT + "var " + gsl + " = __fetch_global('" + gsl + "');\n";
         wx += stmts +
             "; }";
         return wx;
@@ -217,10 +218,8 @@ def(expr, "Literal", {
 def(wast, "ParametersList", {
     addParameter : function(p) { this.children.push(p); },
     toWinxed : function(st) {
-        if (this.children.length == 0)
-            return "this";
-        return "this, " +
-            this.children.map(function(c) { return c.toWinxed(st); }).join(", ");
+        return this.children.map(function(c) { return c.toWinxed(st) + ", "; }).join() +
+            "var this [named,optional]";
     }
 });
 
@@ -271,7 +270,7 @@ def(wast, "StatementBlock", {
     toWinxed : function(st) {
         st = new SymbolTable(st);
         return "{\n            " +
-            this.children.map(function(c) { return c.toWinxed(st); }).join(";\n            ") +
+            this.children.map(function(c) { return c.toWinxed(st); }).join(";\n" + BLCK_INDENT) +
             ";\n        }";
     }
 });
@@ -326,7 +325,7 @@ def(expr, "jsObjectLiteral", {
     toWinxed : function(st) {
         var wx = "new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__";
         for (var key in this.children)
-            wx += ", " + this.children[key].toWinxed(st) + ":[named('" + key.toString() + "')]";
+            wx += ",\n" + ARG_INDENT + this.children[key].toWinxed(st) + ":[named('" + key.toString() + "')]";
         return wx + ")";
     }
 });
@@ -336,8 +335,8 @@ def(expr, "SubInvokeExpr", {
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function(st) {
         var wx = "";
-        wx += this.name.toWinxed(st) + "(null" +
-            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
+        wx += this.name.toWinxed(st) + "(" +
+            this.children.map(function(c) { return "\n" + ARG_INDENT + c.toWinxed(st); }).join(",") +
             ")";
         return wx;
     }
@@ -351,6 +350,7 @@ def(expr, "MethodInvokeExpr", {
     toWinxed : function(st) {
         var wx = "";
         var n = this.name.toWinxed(st);
+
         if (this.object == null)
             return this.toWinxedError("Object cannot be null in a MethodInvokeExpr (" + n + ")");
         var obj = "";
@@ -358,9 +358,10 @@ def(expr, "MethodInvokeExpr", {
             obj = this.object.toWinxed(st);
         else
             obj= "(" + this.object.toWinxed(st) + ")";
-        wx += "var(" + obj + ".*'" + n + "')(" + obj +
-            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
-            ")";
+
+        wx += "var(" + obj + ".*'" + n + "')(" +
+            this.children.map(function(c) { return "\n" + ARG_INDENT + c.toWinxed(st) + ","; }).join("") +
+            "\n" + ARG_INDENT + obj + ":[named('this')])";
         return wx;
     }
 });
@@ -375,7 +376,7 @@ def(expr, "NewOperator", {
             wx += this.name.toWinxed(st);
         else
             wx += "(" + this.name.toWinxed(st) + ")";
-        wx += this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") + ")";
+        wx += this.children.map(function(c) { return ",\n" + ARG_INDENT + c.toWinxed(st); }).join("") + ")";
         return wx;
     }
 });

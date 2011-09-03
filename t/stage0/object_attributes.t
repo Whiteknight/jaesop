@@ -1,5 +1,6 @@
-load_bytecode("rosella/test.pbc");
-Rosella.Test.test_list({
+WX->load_bytecode("rosella/test.pbc");
+WX->Rosella.Test.test_list(
+{
     empty_object_literal : function(t) {
         var x = { };
         t.assert.not_null(x);
