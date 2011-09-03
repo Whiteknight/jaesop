@@ -6,7 +6,8 @@ var STMT_INDENT = "        ";
 var BLCK_INDENT = "            ";
 var FUNC_ENTRY = "    using JavaScript.__fetch_global;\n" +
                  "    using JavaScript.__store_global;\n" +
-                 "    var __OBJECT_CONSTRUCTOR__ = __fetch_global('Object');\n";
+                 "    var __OBJECT_CONSTRUCTOR__ = __fetch_global('Object');\n" +
+                 "    var __tmp;\n";
 
 /* Winxed code generation state object
     This object type maintains state for the code generator to keep track of
@@ -348,15 +349,16 @@ def(expr, "MethodInvokeExpr", {
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function(st) {
         var wx = "";
-        if (this.object != null) {
-            if (this.object.nodeType == "Literal" || this.object.nodeType == "MemberExpr")
-                wx += this.object.toWinxed(st) + ".";
-            else
-                wx += "(" + this.object.toWinxed(st) + ").";
-        }
-
-        wx += this.name.toWinxed(st) + "(" +
-            this.children.map(function(c) { return c.toWinxed(st); }).join(", ") +
+        var n = this.name.toWinxed(st);
+        if (this.object == null)
+            return this.toWinxedError("Object cannot be null in a MethodInvokeExpr (" + n + ")");
+        var obj = "";
+        if (this.object.nodeType == "Literal" || this.object.nodeType == "MemberExpr" || this.object.nodeType == "VariableName")
+            obj = this.object.toWinxed(st);
+        else
+            obj= "(" + this.object.toWinxed(st) + ")";
+        wx += "var(" + obj + ".*'" + n + "')(" + obj +
+            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
             ")";
         return wx;
     }
