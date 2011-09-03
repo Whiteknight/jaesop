@@ -239,7 +239,8 @@ def(stmt, "VariableDeclare", {
     setName : function(n) { this.name = n; },
     setInitializer : function(i) { this.initializer = i; },
     toWinxed : function(st) {
-        var n = this.name.toWinxed(st);
+
+        var n = this.name.name;
         var wx =  "var " + n;
 
         if (this.initializer != null)
@@ -259,7 +260,7 @@ def(expr, "VariableName", {
     toWinxed : function(st) {
         var n = this.name.toString();
         var locale = st.findSymbol(n);
-        if (locale == "global")
+        if (locale == "global" || locale == null)
             st.seeGlobalLocally(n);
         return n;
     }
@@ -369,12 +370,12 @@ def(expr, "NewOperator", {
     setName : function(n) { this.name = n; },
     addOperand : function(a) { this.children.push(a); },
     toWinxed : function(st) {
-        var wx = "new ";
-        if (this.name.nodeType == "Literal" || this.name.nodeType == "MemberExpr")
+        var wx = "JavaScript.JSObject.construct(null, ";
+        if (this.name.nodeType == "Literal" || this.name.nodeType == "MemberExpr" || this.name.nodeType == "VariableName")
             wx += this.name.toWinxed(st);
         else
             wx += "(" + this.name.toWinxed(st) + ")";
-        wx += "(" + this.children.map(function(c) { return c.toWinxed(st); }).join(", ") + ")";
+        wx += this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") + ")";
         return wx;
     }
 });

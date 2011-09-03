@@ -169,7 +169,7 @@ def(expr,'WinxedLiteralExpr', {
 def(expr,'ThisExpr', {
     toWast : function() {
         var w = getWast("Literal");
-        w.literalValue("self");
+        w.literalValue("this");
         return w;
     }
 });
