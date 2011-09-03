@@ -36,6 +36,7 @@ IdentifierName
     | VOIDTOKEN
     | WHILE
     | WITH
+    | WINXEDRAW
     ;
 
 Literal
@@ -590,6 +591,7 @@ Statement
     | ThrowStatement
     | TryStatement
     | DebuggerStatement
+    | WinxedRawStatement
     ;
 
 Block
@@ -822,6 +824,11 @@ DebuggerStatement
       {{ $$ = yy.Node('DebuggerStmt', {}); }}
     | DEBUGGER error
       {{ $$ = yy.Node('DebuggerStmt', {}); }}
+    ;
+
+WinxedRawStatement
+    : WINXEDRAW
+      {{ $$ = yy.Node('WinxedLiteralExpr', {value: String($1)}) }}
     ;
 
 FunctionDeclaration

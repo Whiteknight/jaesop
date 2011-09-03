@@ -155,6 +155,16 @@ def(expr,'LiteralExpr', {
     }
 });
 
+def(expr,'WinxedLiteralExpr', {
+    toWast : function() {
+        var w = getWast("Literal");
+        var v = this.value.toString();
+        w.literalValue(v.substr(6) + " /* Winxed Literal */");
+        return w;
+    }
+});
+
+
 // "this" expression node
 def(expr,'ThisExpr', {
     toWast : function() {
