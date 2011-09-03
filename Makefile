@@ -1,13 +1,13 @@
 all: build
 
-build: build-stage0
+build: build-stage0 build-test
 
-test: build build-test
+test: build
 	winxed --nowarn t/harness
 
 build-stage0: stage0/js/parser.js stage0/runtime/jsobject.pbc
 
-build-test: t/testlib.pbc
+build-test: t/testlib.pbc t/harnesslib.pbc
 
 stage0/js/parser.js: stage0/js/grammar.jiy stage0/js/lexer.jil
 	jison stage0/js/grammar.jiy stage0/js/lexer.jil
@@ -25,4 +25,11 @@ t/testlib.pbc: t/testlib.pir
 
 t/testlib.pir: t/testlib.winxed
 	winxed -c -o t/testlib.pir t/testlib.winxed
+
+t/harnesslib.pbc: t/harnesslib.pir
+	parrot -o t/harnesslib.pbc t/harnesslib.pir
+
+t/harnesslib.pir: t/testlib.winxed
+	winxed -c -o t/harnesslib.pir t/harnesslib.winxed
+
 

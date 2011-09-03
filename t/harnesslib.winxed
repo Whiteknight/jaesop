@@ -1,0 +1,28 @@
+// Testfile wrapper for testing stage 0 files written in JavaScript
+class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
+{
+    function JavaScriptStage0File(var p [slurpy])
+    {
+        self.TestFile(p:[flat]);
+    }
+
+    function setup_spawn(string jsfilename)
+    {
+        string wxfilename = jsfilename + ".wx_temp";
+        var compile_cmd = ["node", "./js2wxst0.js", "-o", wxfilename, "-i", "./t/testlib.pbc", jsfilename];
+        int is_ok = spawnw(compile_cmd);
+        is_ok = (is_ok >> 8) & 0xFF;
+        if (is_ok != 0) {
+            self.mark_test_abort(sprintf("Could not compile '%s' to winxed\nCommand: %s", [jsfilename, compile_cmd.join(" ")]));
+            return null;
+        }
+        return wxfilename;
+    }
+
+    function cleanup_spawn(string filename)
+    {
+        var wxfile = new Rosella.FileSystem.File(filename);
+        if (wxfile.exists())
+            wxfile.delete();
+    }
+}

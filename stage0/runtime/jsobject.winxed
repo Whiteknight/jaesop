@@ -63,7 +63,7 @@ namespace JavaScript
                 var jsobj_values [slurpy,named])
         {
             if (!(constructor instanceof JSObject))
-                constructor = box_func(constructor, null);
+                constructor = box_function(constructor, null);
             if (proto == null)
                 proto = get_prototype(constructor);
             var jsobj = new JSObject(proto, constructor, jsobj_values:[flat,named]);
@@ -133,24 +133,26 @@ namespace JavaScript
 
         function get_pmc_keyed_int[vtable](int key)
         {
-            var getf = self.*"__GET_PMC_IDX__";
-            if (getf != null)
-                return self.*getf(key);
+            var a = self.*"__ARRAY_CONTENTS__";
+            if (a == null)
+                return null;
+            if (elements(a) >= key)
+                return a[key];
             return self.*(string(key));
         }
 
         function set_pmc_keyed_int[vtable](int key, var value)
         {
-            var setf = self.*"__SET_PMC_IDX__";
-            if (setf != null)
-                self.*setf(key, value);
-            else
+            var a = self.*"__ARRAY_CONTENTS__";
+            if (a == null)
                 self.*(string(key)) = value;
+            else
+                a[key] = value;
         }
 
         function does[vtable](string role)
         {
-            var roles = self.*"__DOES_ROLEs__";
+            var roles = self.*"__DOES_ROLES__";
             if (roles == null)
                 return false;
             for (string r in roles) {
@@ -182,6 +184,14 @@ namespace JavaScript
             }
             var result = f(args:[flat], this:[named('this')]);
             return result;
+        }
+
+        function elements[vtable]()
+        {
+            var a = self.*"__ARRAY_CONTENTS__";
+            if (a == null)
+                return 0;
+            return elements(a);
         }
 
         /* Helper Methods
@@ -234,21 +244,21 @@ namespace JavaScript
         {
             using JavaScript.JSObject.box_function;
 
-            p.*"toString" = box_function(function(var obj) {
-                var code_pmc = obj.*"__CODE_PMC__";
+            p.*"toString" = box_function(function(var this [named]) {
+                var code_pmc = this.*"__CODE_PMC__";
                 if (code_pmc != null)
                     return string(code_pmc);
-                string type_name = obj.get_type_name();
+                string type_name = this.get_type_name();
                 string r = "[Object " + type_name + "]";
                 return r;
             });
 
-            p.*"call" = box_function(function(var func, var this, var args[slurpy]) {
-                return func(args:[flat], this:[named('this')]);
+            p.*"call" = box_function(function(var obj, var args[slurpy], var this [named]) {
+                return this(args:[flat], obj:[named('this')]);
             });
 
-            p.*"apply" = box_function(function(var func, var this, var args) {
-                return func(args:[flat], this:[named('this')]);
+            p.*"apply" = box_function(function(var obj, var args, var this [named]) {
+                return this(args:[flat], obj:[named('this')]);
             });
 
             p.*"__DOES_ROLES__" = ["hash"];
@@ -267,16 +277,15 @@ namespace JavaScript
         function get_Object_prototype[anon](var func_proto)
         {
             using JavaScript.JSObject.box_function;
-
             var p = new JSObject(func_proto, null);
 
-            p.*"hasOwnProperty" = box_function(function(var obj, string key) {
-                var attrs = obj.get_attribute_hash();
+            p.*"hasOwnProperty" = box_function(function(string key, var this [named]) {
+                var attrs = this.get_attribute_hash();
                 return exists attrs[key] ? true : false;
             });
 
-            p.*"getPrototypeOf" = box_function(function(var obj) {
-                return obj.get_prototype();
+            p.*"getPrototypeOf" = box_function(function(var this [named]) {
+                return this.get_prototype();
             });
 
             return p;
@@ -301,35 +310,37 @@ namespace JavaScript
         {
             using JavaScript.JSObject.box_function;
             var p = new JSObject(obj_proto, null);
-            var a = p.get_attribute_hash();
 
-            a["__GET_PMC_IDX__"] = box_function(function(var obj, int key) {
-                var c = get_array_contents(obj);
-                return c[key];
-            });
-
-            a["__SET_PMC_IDX__"] = box_function(function(var obj, int key, var value) {
-                var c = get_attribute_hash(obj);
-                c[key] = value;
-                obj.*"length" = elements(c);
-            });
-
-            a["__GET_ITER__"] = box_function(function(var obj) {
+            p.*"__GET_ITER__" = box_function(function(var this [named]) {
                 // TODO: Actually, we need to iterate over the array contents
                 //       AND the rest of the JSObject attributes
-                var c = get_attribute_hash(obj);
+                var c = this.get_attribute_hash();
                 var c_iter;
                 ${ iter c_iter, c };
                 return c_iter;
             });
 
-            a["__DOES_ROLES__"] = ["array", "hash"];
+            p.*"push" = box_function(function(var item, var this [named]) {
+                var a = this.*"__ARRAY_CONTENTS__";
+                push(a, item);
+                this.*"length" = elements(a);
+            });
+
+            p.*"pop" = box_function(function(var this [named]) {
+                var a = this.*"__ARRAY_CONTENTS__";
+                var r = a.pop();
+                this.*"length" = elements(a);
+                return r;
+            });
+
+            p.*"__DOES_ROLES__" = ["array", "hash"];
+            return p;
         }
 
         function Array(var args [slurpy], var this [named('this')])
         {
-            var a = get_attribute_hash(this);
-            a["__ARRAY_CONTENTS__"] = [];
+            var a = this.get_attribute_hash();
+            a["__ARRAY_CONTENTS__"] = args;
             a["length"] = 0;
         }
     }
@@ -365,6 +376,6 @@ namespace JavaScript
         using JavaScript.Array.Array;
         var array_proto = JavaScript.Array.get_Array_prototype(obj_proto);
         var array = JavaScript.JSObject.box_function(Array, array_proto);
-        __store_global("Array", obj);
+        __store_global("Array", array);
     }
 }

@@ -12,6 +12,7 @@ function main(args) {
     var infile;
     var outfile = "-";
     var write = function (msg) { sys.puts(msg); };
+    var loadlibs = [];
 
     while(args.length > 0) {
         var arg = args.shift();
@@ -19,6 +20,8 @@ function main(args) {
             astdebug = 1;
         else if(arg == "-o")
             outfile = args.shift();
+        else if(arg == "-i")
+            loadlibs.push(args.shift());
         else {
             infile = arg;
             if (args.length > 0) {
@@ -49,7 +52,7 @@ function main(args) {
         write = function(msg) { fs.writeSync(outfileHandle, msg, 0); };
     }
 
-    var winxed = wast.toWinxed();
+    var winxed = wast.toWinxed(loadlibs);
     write(winxed);
 }
 

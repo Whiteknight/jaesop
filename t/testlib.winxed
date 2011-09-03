@@ -1,29 +1,38 @@
-
-// Testfile wrapper for testing stage 0 files written in JavaScript
-class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
+function setup[anon,load,init]()
 {
-    function JavaScriptStage0File(var p [slurpy])
-    {
-        self.TestFile(p:[flat]);
-    }
+    load_bytecode("rosella/test.pbc");
+    using Rosella.Test.test_list;
+    using JavaScript.__store_global;
+    __store_global('test_list', test_list);
 
-    function setup_spawn(string jsfilename)
-    {
-        string wxfilename = jsfilename + ".wx_temp";
-        var compile_cmd = ["node", "./js2wxst0.js", "-o", wxfilename, jsfilename];
-        int is_ok = spawnw(compile_cmd);
-        is_ok = (is_ok >> 8) & 0xFF;
-        if (is_ok != 0) {
-            self.mark_test_abort(sprintf("Could not compile '%s' to winxed\nCommand: %s", [jsfilename, compile_cmd.join(" ")]));
-            return null;
-        }
-        return wxfilename;
-    }
+    using TestObject;
+    var to_proto = get_TestObject_prototype();
+    var t = JavaScript.JSObject.box_function(TestObject, to_proto);
+    __store_global("TestObject", t);
+}
 
-    function cleanup_spawn(string filename)
-    {
-        var wxfile = new Rosella.FileSystem.File(filename);
-        if (wxfile.exists())
-            wxfile.delete();
-    }
+function get_TestObject_prototype()
+{
+    using JavaScript.__fetch_global;
+
+    var f = __fetch_global("Function");
+    var p = new JavaScript.JSObject(f.get_prototype(), null);
+    var assert_class = class Rosella.Test.Asserter;
+    var assert_meths = assert_class.methods();
+    for (string name in assert_meths)
+        p.*name = get_asserter_trampoline(name);
+    return p;
+}
+
+function TestObject(var this [named])
+{
+    this.*"__asserter__" = new Rosella.Test.Asserter;
+}
+
+function get_asserter_trampoline(string name)
+{
+    return JavaScript.JSObject.box_function(function(var args[slurpy], var this [named]) {
+        var a = this.*"__asserter__";
+        a.*name(args:[flat]);
+    });
 }

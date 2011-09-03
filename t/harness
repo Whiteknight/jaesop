@@ -3,7 +3,7 @@
 
 $load "rosella/core.pbc";
 $load "rosella/harness.pbc";
-$load "./t/testlib.pbc";
+$load "./t/harnesslib.pbc";
 
 // Forward declaration of classes.
 namespace Rosella {

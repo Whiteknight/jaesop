@@ -5,10 +5,12 @@ var FUNC_INDENT = "";
 var STMT_INDENT = "    ";
 var ARG_INDENT =  "        ";
 var BLCK_INDENT = "            ";
-var FUNC_ENTRY = "    using JavaScript.__fetch_global;\n" +
+var FUNC_ENTRY = "    /* Standard preamble */\n" +
+                 "    using JavaScript.__fetch_global;\n" +
                  "    using JavaScript.__store_global;\n" +
                  "    var __OBJECT_CONSTRUCTOR__ = __fetch_global('Object');\n" +
-                 "    var __tmp;\n";
+                 "    var __ARRAY_CONSTRUCTOR__ = __fetch_global('Array');\n" +
+                 "    var __tmp;\n\n";
 
 /* Winxed code generation state object
     This object type maintains state for the code generator to keep track of
@@ -104,7 +106,7 @@ var stmt = prototypes.stmt = wast.clone();
 
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
-    toWinxed: function() {
+    toWinxed: function(loadlibs) {
         //var wx = "namespace JavaScript[HLL]\n{\n";
         var st = new SymbolTable(null);
         var wx =
@@ -115,12 +117,14 @@ def(wast, "Program", {
             //"        var(Rosella.initialize_rosella)();\n" +
             //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
             "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+            loadlibs.map(function(l) { return "    load_bytecode('" + l + "');\n"; }) +
             "}\n\n" +
             "function __main__[main,anon](var arguments)\n" +
             "{\n" +
             "    using JavaScript.JSObject.box_function;\n" +
             "    using JavaScript.__store_global;\n" +
             "    try {\n" +
+            "        /* Box global functions */\n" +
             "        var __f;\n";
         wx += this.children.map(function(c) {
             if (c.name != null) {
@@ -133,6 +137,7 @@ def(wast, "Program", {
                 return "";
         }).join("\n");
         wx += "\n" +
+            "        /* Call the real main function */\n" +
             "        __js_main__(arguments);\n" +
             "    } catch (__e__) {\n" +
             "        say(__e__.message);\n" +
@@ -155,10 +160,22 @@ def(wast, "MainFunctionDecl", {
             "{\n" +
             FUNC_ENTRY;
         var stmts = this.children.map(function(c) { return STMT_INDENT + c.toWinxed(st); }).join(";\n");
-        for (var gul in st.globals_seen_locally)
-            wx += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
-        wx += stmts +
-            ";\n}";
+
+        var fwd_fetch = "";
+        for (var g in st_globals) {
+            if (g in st.globals_seen_locally)
+                fwd_fetch += STMT_INDENT + "var " + g + " = __fetch_global('" + g + "');\n";
+            else
+                fwd_fetch += STMT_INDENT + "var " + g + ";\n";
+        }
+        if (fwd_fetch != "")
+            fwd_fetch = STMT_INDENT + "/* Declare and fetch global values */\n" + fwd_fetch + "\n";
+        wx += fwd_fetch;
+
+        wx += STMT_INDENT + "/* Begin user code */\n" +
+            stmts + (stmts == "" ? "" : ";\n") +
+            STMT_INDENT + "/* End user code */\n" +
+            "}";
         return wx;
     }
 });
@@ -175,12 +192,20 @@ def(wast, "FunctionDecl", {
             "{\n" +
             FUNC_ENTRY;
         var stmts = this.children.map(function(c) { return STMT_INDENT + c.toWinxed(st); }).join(";\n");
+
+        var fwd_fetch = "";
         for (var gul in st.globals_seen_locally) {
             if (gul != this_name)
-                wx += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
+                fwd_fetch += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
         }
-        wx += stmts +
-            ";\n}";
+        if (fwd_fetch != "")
+            fwd_fetch = STMT_INDENT + "/* Declare and fetch global values */\n" + fwd_fetch + "\n";
+        wx += fwd_fetch;
+
+        wx += STMT_INDENT + "/* Begin user code */\n" +
+            stmts + (stmts == "" ? "" : ";\n") +
+            STMT_INDENT + "/* End user code */\n" +
+            "}";
         return wx;
     }
 });
@@ -194,12 +219,12 @@ def(wast, "ClosureDecl", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
         st = new SymbolTable(st);
-        var wx = "function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {";
+        var wx = "JavaScript.JSObject.box_function(function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {\n";
         var stmts = this.children.map(function(c) { return "\n" + BLCK_INDENT + c.toWinxed(st); }).join(";");
         for (var gsl in st.globals_seen_locally)
             wx += BLCK_INDENT + "var " + gsl + " = __fetch_global('" + gsl + "');\n";
         wx += stmts +
-            "; }";
+            "; })";
         return wx;
     }
 });
@@ -265,7 +290,11 @@ def(expr, "VariableName", {
     toWinxed : function(st) {
         var n = this.name.toString();
         var locale = st.findSymbol(n);
-        if (locale == "global" || locale == null)
+        if (locale == null) {
+            st.addGlobal(n);
+            st.seeGlobalLocally(n);
+        }
+        else if (locale == "global")
             st.seeGlobalLocally(n);
         return n;
     }
@@ -322,7 +351,9 @@ def(expr, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
     toWinxed : function(st) {
         // TODO: Need to redo this to fetch the Array constructor
-        "new JSArray(" + this.children.map(function(c) { return c.toWinxed(st); }).join(", ") + ")";
+        return "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__" +
+            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
+            ")";
     }
 });
 
