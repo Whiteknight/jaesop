@@ -148,7 +148,7 @@ RCLASS "["({BSL}|[^\\[])*"]"
 "true"    {return 'TRUETOKEN'}
 "false"    {return 'FALSETOKEN'}
 "null"    {return 'NULLTOKEN'}
-"WINXED ".* { return 'WINXEDRAW'}
+"WX->".* { return 'WINXEDRAW'}
 
 ({IDS})+({IDS}|[0-9])*    {return 'IDENT';}
 

@@ -159,7 +159,7 @@ def(expr,'WinxedLiteralExpr', {
     toWast : function() {
         var w = getWast("Literal");
         var v = this.value.toString();
-        w.literalValue(v.substr(6) + " /* Winxed Literal */");
+        w.literalValue(v.substr(4) + " /* Winxed Literal */");
         return w;
     }
 });
