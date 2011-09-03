@@ -245,7 +245,7 @@ def(expr, "Literal", {
 def(wast, "ParametersList", {
     addParameter : function(p) { this.children.push(p); },
     toWinxed : function(st) {
-        return this.children.map(function(c) { return c.toWinxed(st) + ", "; }).join() +
+        return this.children.map(function(c) { return c.toWinxed(st) + ", "; }).join("") +
             "var this [named,optional]";
     }
 });

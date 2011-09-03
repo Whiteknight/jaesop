@@ -31,7 +31,6 @@ function main(args) {
         }
     }
 
-    sys.puts(infile);
     var infileText = fs.readFileSync(infile).toString();
 
     var ast = compiler.parse(infileText);

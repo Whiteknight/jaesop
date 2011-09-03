@@ -1,22 +1,21 @@
 var t = new TestObject();
 test_list([
-    function(t) {
+    function() {
         var x = { };
-        t.assert.not_null(x);
-        //t.assert.instance_of(x, class JavaScript.JSObject);
+        t.not_null(x);
     },
 
-    function(t) {
+    function() {
         var x = { a : "item a", b : "item b" };
-        t.assert.equal(x.a, "item a");
-        t.assert.equal(x["a"], "item a");
-        t.assert.equal(x.b, "item b");
-        t.assert.equal(x["b"], "item b");
+        t.equal(x.a, "item a");
+        t.equal(x["a"], "item a");
+        t.equal(x.b, "item b");
+        t.equal(x["b"], "item b");
     },
 
-    function(t) {
+    function() {
         var x = {};
         x.foo = "test";
-        t.assert.equal(x.foo, "test");
+        t.equal(x.foo, "test");
     }
 ]);
