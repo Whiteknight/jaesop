@@ -109,6 +109,7 @@ def(node,'Program', {
     toWast : function() {
         var p = getWast("Program");
         var main = getWast("MainFunctionDecl");
+        p.addFunction(main);
         for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].nodeType == "FunctionDecl") {
                 p.addFunction(this.children[i].toWast());
@@ -116,7 +117,6 @@ def(node,'Program', {
                 main.addStatement(this.children[i].toWast());
             }
         }
-        p.addFunction(main);
         return p;
     }
 });
@@ -124,8 +124,8 @@ def(node,'Program', {
 // Identifier node
 def(node,'IdPatt', {
     toWast : function() {
-        var w = getWast("Literal");
-        w.literalValue(this.name);
+        var w = getWast("VariableName");
+        w.setName(this.name);
         return w;
     }
 }, function (name) {
@@ -174,7 +174,7 @@ def(expr,'RegExpExpr', {
 // Var statement node
 def(stmt,'VarDecl', {
     toWast : function() {
-        var w = getWast("VarDecl");
+        var w = getWast("VariableDeclare");
         var node = this.children[0];
         if (node.nodeType == "InitPatt") {
             w.setName(node.children[0].toWast());
@@ -201,8 +201,8 @@ def(expr,'InitPatt', {
 // Identifier expression node
 def(expr,'IdExpr', {
     toWast : function() {
-        var w = getWast("Literal");
-        w.literalValue(this.name);
+        var w = getWast("VariableName");
+        w.setName(this.name);
         return w;
     }
 });
@@ -212,7 +212,7 @@ def(expr,'AssignExpr', {
     toWast : function() {
         var w = getWast("Assignment");
         w.setDestination(this.children[0].toWast());
-        w.setValue(this.childen[1].toWast());
+        w.setValue(this.children[1].toWast());
         return w;
     }
 });
@@ -440,10 +440,20 @@ def(expr,'CountExpr', {
 
 def(expr,'CallExpr', {
     toWast : function() {
-        var w = getWast("InvokeExpr");
-        w.setObject(null);
+        var w = getWast("SubInvokeExpr");
         w.setName(this.children[0].toWast());
         for (var i = 1; i < this.children.length; i++)
+            w.addArgument(this.children[i].toWast());
+        return w;
+    }
+});
+
+def(expr,'InvokeExpr', {
+    toWast : function() {
+        var w = getWast("MethodInvokeExpr");
+        w.setObject(this.children[0].toWast());
+        w.setName(this.children[1].toWast());
+        for (var i = 2; i < this.children.length; i++)
             w.addArgument(this.children[i].toWast());
         return w;
     }
@@ -471,17 +481,6 @@ def(expr,'KeyedIndexExpr', {
     toWast : function() {
         var w = getWast("KeyedIndexExpr");
         this.children.forEach(function(c) { w.addKey(c.toWast()); });
-        return w;
-    }
-});
-
-def(expr,'InvokeExpr', {
-    toWast : function() {
-        var w = getWast("InvokeExpr");
-        w.setObject(this.children[0].toWast());
-        w.setName(this.children[1].toWast());
-        for (var i = 2; i < this.children.length; i++)
-            w.addArgument(this.children[i].toWast());
         return w;
     }
 });
