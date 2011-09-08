@@ -6,8 +6,9 @@ class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
         self.TestFile(p:[flat]);
     }
 
-    function setup_spawn(string jsfilename)
+    function setup_spawn()
     {
+        string jsfilename = string(self);
         string wxfilename = jsfilename + ".wx_temp";
         var compile_cmd = ["node", "./js2wxst0.js", "-o", wxfilename, "-i", "./t/testlib.pbc", jsfilename];
         int is_ok = spawnw(compile_cmd);

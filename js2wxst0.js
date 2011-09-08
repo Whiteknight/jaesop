@@ -57,7 +57,7 @@ function main(args) {
 }
 
 function usageAndExit() {
-    sys.puts("Usage: " + node_exe + " " + js2wx_exe + "[--astdebug] [-o <wx_file>] <js_file>");
+    sys.puts("Usage: " + node_exe + " " + js2wx_exe + " [--astdebug] [-i pbc] [-o <wx_file>] <js_file>");
     process.exit(0);
 }
 

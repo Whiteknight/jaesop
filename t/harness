@@ -16,9 +16,7 @@ class JavaScriptStage0File;
 // Harness Main. Execute tests in directories and display results.
 function harness_main(var args)
 {
-    var factory = new Rosella.Harness.TestRun.Factory();
     var harness = new Rosella.Harness();
-    var view = harness.default_view();
 
     // Default directories. These are executed if none are specified in args
     if (elements(args) == 0) {
@@ -28,19 +26,17 @@ function harness_main(var args)
         ];
     }
 
-    factory.add_testfile_type("t/stage0", class JavaScriptStage0File);
+    harness.add_testfile_type("t/stage0", class JavaScriptStage0File);
     for (string path in args) {
         var parts = split("_", path);
         if (elements(parts) > 1)
-            factory.add_test_dirs("Winxed", path, 1:[named("recurse")]);
+            harness.add_test_dirs("Winxed", path, 1:[named("recurse")]);
         else
-            factory.add_test_dirs(string(parts[0]), path, 1:[named("recurse")]);
+            harness.add_test_dirs(string(parts[0]), path, 1:[named("recurse")]);
     }
-
-    var run = factory.create();
-    view.add_run(run, 0);
-    harness.run(run, view);
-    view.show_results();
+    harness.setup_test_run(1:[named("sort")]);
+    harness.run();
+    harness.default_view().show_results();
 }
 
 // Show help message
@@ -49,9 +45,11 @@ function show_help(string program_name)
     string msg = sprintf(<<:
 winxed %s [<DIRS>]
 winxed %s --help
-Parrot/Winxed TAP Harness. Execute test suite in folders. If <DIRS> is passed,
-execute tests in those directories only. Otherwise, execute tests in default
-directories: ( "t/stage0" ).
+Parrot/Winxed TAP Harness for Jaesop. Execute test suite in folders. If
+<DIRS> is passed execute tests in those directories only. Otherwise, execute
+tests in default directories.
+
+    default directories: ( "t/stage0" ).
 
     <DIRS>      A list of test directories to execute
     --help      Show this help message
@@ -63,9 +61,6 @@ directories: ( "t/stage0" ).
 // Main function. Load in the libraries and run the test, catching errors.
 function main[main](var args)
 {
-    //var rosella = load_packfile("rosella/core.pbc");
-    //var(Rosella.initialize_rosella)("harness", "filesystem");
-    //var(Rosella.load_bytecode_file)("t/testlib.pbc");
     var(Rosella.Parrot.try_report)(function() {
         string program_name = args.shift();
         if (elements(args) == 1 && args[0] == "--help")
