@@ -316,8 +316,8 @@ def(wast, "StatementBlock", {
     toWinxed : function(st) {
         st = new SymbolTable(st);
         return "{\n" +
-            this.children.map(function(c) { return c.wrapWinxed(st) + "\n"; }).join("") +
-            "}";
+            this.children.map(function(c) { return BLCK_INDENT + c.wrapWinxed(st) + ";\n"; }).join("") +
+            STMT_INDENT + "}";
     }
 });
 
@@ -510,7 +510,7 @@ def(expr, "ConditionalExpr", {
     }
 });
 
-def(blck, "TryStatement", {
+def(wast, "TryStatement", {
     setTryBlock : function(b) { this.children[0] = b; },
     setCatchClause : function(c) { this.children[1] = c; },
     toWinxed : function(st) {
@@ -518,7 +518,7 @@ def(blck, "TryStatement", {
     }
 });
 
-def(blck, "CatchClause", {
+def(wast, "CatchClause", {
     setExceptionVar : function(e) { this.children[0] = e; },
     setCatchBlock : function(b) { this.children[1] = b; },
     toWinxed : function(st) {
@@ -526,7 +526,7 @@ def(blck, "CatchClause", {
         var ex = null;
         if (this.children[0] != null) {
             ex = this.children[0].wrapWinxed(st);
-            wx += "var __exception__";
+            wx += "__exception__";
         }
         wx += ") ";
         if (ex == null) {
@@ -534,7 +534,9 @@ def(blck, "CatchClause", {
         } else {
             var st = new SymbolTable(st);
             st.addLocal(ex);
-            wx += "{\n" + BLCK_INDENT + "var " + ex + " = __exception__.payload;\n" +
+            wx += "{\n" +
+                BLCK_INDENT + "var " + ex + " = __exception__.payload;\n" +
+                BLCK_INDENT + "if (" + ex + " == null) " + ex + " = __exception__.message;\n" +
                 BLCK_INDENT + this.children[1].wrapWinxed(st) + "\n" +
                 STMT_INDENT + "}\n";
         }
