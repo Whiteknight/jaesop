@@ -151,7 +151,9 @@ def(wast, "Program", {
             "        /* Call the real main function */\n" +
             "        __js_main__(arguments);\n" +
             "    } catch (__e__) {\n" +
-            "        say(__e__.message);\n" +
+            "        string __msg__ = string(__e__.payload);\n" +
+            "        if (__msg__ == null) __msg__ = string(__e__.message);\n" +
+            "        say(__msg__);\n" +
             "        for (string bt in __e__.backtrace_strings())\n" +
             "            say(bt);\n" +
             "    }\n" +
@@ -542,4 +544,12 @@ def(wast, "CatchClause", {
         }
         return wx;
     }
+});
+
+def(stmt, "ThrowStatement", {
+    setPayload : function(p) { this.children[0] = p; },
+    toWinxed : function(st) {
+        var wx = "__tmp = new 'Exception'; __tmp.payload = " + this.children[0].toWinxed(st) + "; throw(__tmp)";
+        return wx;
+  }
 });

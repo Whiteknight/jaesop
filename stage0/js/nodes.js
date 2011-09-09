@@ -336,7 +336,9 @@ def(node,'CatchClause', {
 
 def(stmt,'ThrowStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ThrowStatement");
+        w.setPayload(this.children[0].toWast());
+        return w;
     }
 });
 
