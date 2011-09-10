@@ -20,9 +20,9 @@ class JavaScriptStage0File : Rosella.Harness.TestFile.Winxed
         return wxfilename;
     }
 
-    function cleanup_spawn(string filename)
+    function cleanup_spawn()
     {
-        var wxfile = new Rosella.FileSystem.File(filename);
+        var wxfile = new Rosella.FileSystem.File(string(self));
         if (wxfile.exists())
             wxfile.delete();
     }
