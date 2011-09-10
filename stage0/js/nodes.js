@@ -310,7 +310,10 @@ def(stmt,'ReturnStmt', {
 
 def(stmt,'TryStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("TryStatement");
+        w.setTryBlock(this.children[0].toWast());
+        w.setCatchClause(this.children[1].toWast());
+        return w;
     }
 });
 
@@ -324,13 +327,18 @@ def(stmt,'BlockStmt', {
 
 def(node,'CatchClause', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("CatchClause");
+        w.setExceptionVar(this.children[0].toWast());
+        w.setCatchBlock(this.children[1].toWast());
+        return w;
     }
 });
 
 def(stmt,'ThrowStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("ThrowStatement");
+        w.setPayload(this.children[0].toWast());
+        return w;
     }
 });
 
