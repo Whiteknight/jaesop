@@ -553,3 +553,11 @@ def(stmt, "ThrowStatement", {
         return wx;
   }
 });
+
+def(stmt, "BreakStatement", {
+    toWinxed : function(st) { return "break"; }
+});
+
+def(stmt, "ContinueStatement", {
+    toWinxed : function(st) { return "continue"; }
+});

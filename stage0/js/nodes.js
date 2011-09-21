@@ -350,13 +350,13 @@ def(stmt,'LabelledStmt', {
 
 def(stmt,'BreakStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        return getWast("BreakStatement");
     }
 });
 
 def(stmt,'ContinueStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        return getWast("ContinueStatement");
     }
 });
 
