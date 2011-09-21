@@ -5,6 +5,10 @@ build: build-stage0 build-test
 test: build
 	winxed --nowarn t/harness
 
+clean:
+	rm stage0/runtime/*.pir stage0/runtime/*.pbc
+	rm t/*.pir t/*.pbc
+
 build-stage0: stage0/js/parser.js stage0/runtime/jsobject.pbc
 
 build-test: t/testlib.pbc t/harnesslib.pbc
@@ -18,7 +22,6 @@ stage0/runtime/jsobject.pbc: stage0/runtime/jsobject.pir
 
 stage0/runtime/jsobject.pir: stage0/runtime/jsobject.winxed
 	winxed -c -o stage0/runtime/jsobject.pir stage0/runtime/jsobject.winxed
-
 
 t/testlib.pbc: t/testlib.pir
 	parrot -o t/testlib.pbc t/testlib.pir
