@@ -20,7 +20,6 @@ This is a list of items which are yet to be done, but should be implemented
 before stage 0 is called "complete" and usable for stage 1:
 
 * switch/case/default statements
-* continue/break statements
 * new String()
 * methods on Object
 * methods on Array
