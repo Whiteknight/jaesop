@@ -36,7 +36,7 @@ function harness_main(var args)
     }
     harness.setup_test_run(1:[named("sort")]);
     harness.run();
-    harness.default_view().show_results();
+    harness.show_results();
 }
 
 // Show help message
