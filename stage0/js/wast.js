@@ -279,6 +279,8 @@ def(stmt, "VariableDeclare", {
     setInitializer : function(i) { this.initializer = i; },
     toWinxed : function(st) {
         var n = this.name.name;
+        if (n == undefined)
+            n = this.name.value;
         var wx = "";
 
         if (st.declare_vars_locally == true) {
@@ -290,8 +292,9 @@ def(stmt, "VariableDeclare", {
         } else {
             // In the top-level scope. The variable is already declared as a
             // global. Initialize it if necessary, otherwise do nothing.
+            wx = n;
             if (this.initializer != null)
-                wx += n + " = " + this.initializer.wrapWinxed(st) + "; __store_global('" + n + "', " + n + ")";
+                wx += " = " + this.initializer.wrapWinxed(st) + "; __store_global('" + n + "', " + n + ")";
             st.addGlobal(n);
         }
         return wx;
@@ -453,7 +456,7 @@ def(blck, "WhileStatement", {
     }
 });
 
-def(blck, "DoWhileStatement", {
+def(stmt, "DoWhileStatement", {
     setCondition : function(c) { this.children[1] = c; },
     setBlock : function(c) { this.children[0] = c; },
     toWinxed: function(st) {
@@ -462,7 +465,7 @@ def(blck, "DoWhileStatement", {
     }
 });
 
-def(blck, "IfStatement", {
+def(stmt, "IfStatement", {
     setCondition : function(c) { this.children[0] = c; },
     thenStatement : function(s) { this.children[1] = s; },
     elseStatement : function(s) { this.children[2] = s; },
@@ -475,7 +478,7 @@ def(blck, "IfStatement", {
     }
 });
 
-def(blck, "ForStatement", {
+def(stmt, "ForStatement", {
     setCondition : function(a, b, c) {
         this.children[0] = a;
         this.children[1] = b;
@@ -490,7 +493,7 @@ def(blck, "ForStatement", {
     }
 });
 
-def(blck, "ForInStatement", {
+def(stmt, "ForInStatement", {
     setEnumerator : function(a, b) {
         this.children[0] = a;
         this.children[1] = b;
