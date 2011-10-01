@@ -1,3 +1,6 @@
+$include_const 'iglobals.pasm';
+$include_const 'libpaths.pasm';
+
 namespace JavaScript
 {
     const string ATTR_NAME_PROTOTYPE = "prototype";
@@ -433,6 +436,58 @@ namespace JavaScript
         }
     }
 
+    namespace RegExp
+    {
+        function get_RegExp_prototype[anon](var obj_proto)
+        {
+            using JavaScript.JSObject.box_function;
+            var p = new JSObject(obj_proto, null);
+
+            p.*"compile" = box_function(function(string pattern, string modifiers, var this [named]) {
+                using PCRE.compile;
+                var a = this.get_attribute_hash();
+                a["__STRING_CONTENTS__"] = var(pattern);
+                :(var code, var error, var err_ptr) = compile(pattern, 0);
+                int is_defined;
+                ${ defined is_defined, code };
+                if (!is_defined)
+                    throw("Invalid regex '" + pattern + "' or compilation error");
+                a["__COMPILED_REGEX__"] = code;
+                a["__REGEX_MODIFIERS__"] = modifiers;
+            });
+
+            p.*"exec" = box_function(function(string str, var this [named]) {
+                // TODO:
+            });
+
+            p.*"test" = box_function(function(string str, var this [named]) {
+                var a = this.get_attribute_hash();
+                var code = a["__COMPILED_REGEX__"];
+                var modifiers = a["__REGEX_MODIFIERS__"];
+
+                using PCRE.match;
+                :(int ok, var result) = match(code, str, 0, 0);
+                return ok > 0;
+            });
+
+            return p;
+        }
+
+        function RegExp(string str, string modifiers, var this [named('this')])
+        {
+            using PCRE.compile;
+            var a = this.get_attribute_hash();
+            a["__STRING_CONTENTS__"] = var(str);
+            :(var code, var error, var err_ptr) = compile(str, 0);
+            int is_defined;
+            ${ defined is_defined, code };
+            if (!is_defined)
+                throw("Invalid regex '" + str + "' or compilation error");
+            a["__COMPILED_REGEX__"] = code;
+            a["__REGEX_MODIFIERS__"] = modifiers;
+        }
+    }
+
     /* Setup routine
         Setup the various built-in types
     */
@@ -473,5 +528,35 @@ namespace JavaScript
         var string_proto = JavaScript.String.get_String_prototype(obj_proto);
         var string_const = JavaScript.JSObject.box_function(String, string_proto);
         __store_global("String", string_const);
+
+        __SETUP_REGEX__(obj_proto);
+    }
+
+    function __SETUP_REGEX__[anon](var obj_proto)
+    {
+        var interp = getinterp();
+        var lib_paths = interp[IGLOBALS_LIB_PATHS];
+        var dynext_path = lib_paths[PARROT_LIB_PATH_DYNEXT];
+        ${ unshift dynext_path, "/usr/lib" };
+        load_bytecode("pcre.pbc");
+        using PCRE.init;
+        if (init == null) {
+            cry("Cannot load pcre.pbc");
+            return;
+        }
+        var pcre_lib = init();
+        if (pcre_lib == null) {
+            cry("Cannot load pcre. Library is null");
+            return;
+        }
+        if (!pcre_lib) {
+            cry("Cannot load pcre. Library is false");
+            return;
+        }
+
+        using JavaScript.RegExp.RegExp;
+        var regexp_proto = JavaScript.RegExp.get_RegExp_prototype(obj_proto);
+        var regexp = JavaScript.JSObject.box_function(RegExp, regexp_proto);
+        __store_global("RegExp", regexp);
     }
 }
