@@ -177,7 +177,9 @@ def(expr,'ThisExpr', {
 // Regexp Literal expression node
 def(expr,'RegExpExpr', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("RegExprExpression");
+        w.setPattern(this.body, this.flags);
+        return w;
     }
 });
 

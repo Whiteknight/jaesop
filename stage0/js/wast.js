@@ -10,6 +10,7 @@ var FUNC_ENTRY = "    /* Standard preamble */\n" +
                  "    using JavaScript.__store_global;\n" +
                  "    var __OBJECT_CONSTRUCTOR__ = __fetch_global('Object');\n" +
                  "    var __ARRAY_CONSTRUCTOR__ = __fetch_global('Array');\n" +
+                 "    var __REGEXP_CONSTRUCTOR__ = __fetch_global('RegExp');\n" +
                  "    var __tmp;\n\n";
 
 /* Winxed code generation state object
@@ -600,5 +601,15 @@ def(stmt, "DefaultStatement", {
         for (var i = 0; i < this.children.length; i++)
             wx += BLCK_INDENT + "    " + this.children[i].wrapWinxed(st) + ";\n";
         return wx;
+    }
+});
+
+def(expr, "RegExprExpression", {
+    setPattern : function(p, m) {
+        this.children[0] = p;
+        this.children[1] = m;
+    },
+    toWinxed : function(st) {
+        return "JavaScript.JSObject.construct(null, __REGEXP_CONSTRUCTOR__, '" + this.children[0] + "', '" + this.children[1] + "')";
     }
 });
