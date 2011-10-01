@@ -362,18 +362,29 @@ def(stmt,'ContinueStmt', {
 
 def(stmt,'SwitchStmt', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("SwitchStatement");
+        w.setExpr(this.children[0].toWast());
+        for (var i = 1; i < this.children.length; i++)
+            w.addStatement(this.children[i].toWast());
+        return w;
     }
 });
 
 def(node,'Case', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("CaseStatement");
+        w.setValue(this.children[0].toWast());
+        for (var i = 1; i < this.children.length; i++)
+            w.addStatement(this.children[i].toWast());
+        return w;
     }
 });
 def(node,'DefaultCase', {
     toWast : function() {
-        return errorWast(this.nodeType);
+        var w = getWast("DefaultStatement");
+        for (var i = 0; i < this.children.length; i++)
+            w.addStatement(this.children[i].toWast());
+        return w;
     }
 });
 

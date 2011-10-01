@@ -564,3 +564,35 @@ def(stmt, "BreakStatement", {
 def(stmt, "ContinueStatement", {
     toWinxed : function(st) { return "continue"; }
 });
+
+def(stmt, "SwitchStatement", {
+    setExpr : function(e) { this.children[0] = e; },
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function(st) {
+        var wx = "switch (" + this.children[0].wrapWinxed(st) + ") {\n"
+        for (var i = 1; i < this.children.length; i++)
+            wx += BLCK_INDENT + this.children[i].wrapWinxed(st);
+        return wx + STMT_INDENT + "}";
+    }
+});
+
+def(stmt, "CaseStatement", {
+    setValue : function(v) { this.children[0] = v; },
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function(st) {
+        var wx = "case " + this.children[0].wrapWinxed(st) + ":\n";
+        for (var i = 1; i < this.children.length; i++)
+            wx += BLCK_INDENT + "    " + this.children[i].wrapWinxed(st) + ";\n";
+        return wx;
+    }
+});
+
+def(stmt, "DefaultStatement", {
+    addStatement : function(s) { this.children.push(s); },
+    toWinxed : function(st) {
+        var wx = "default:\n";
+        for (var i = 0; i < this.children.length; i++)
+            wx += BLCK_INDENT + "    " + this.children[i].wrapWinxed(st) + ";\n";
+        return wx;
+    }
+});
