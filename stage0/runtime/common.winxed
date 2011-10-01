@@ -1,0 +1,115 @@
+namespace JavaScript
+{
+    namespace Process
+    {
+        function get_Process_prototype(var obj_proto)
+        {
+            using JavaScript.JSObject.box_function;
+            var p = new JavaScript.JSObject(obj_proto, null);
+
+            p.*"exit" = box_function(function(int code, var this [named('this')]) {
+                exit(code);
+            });
+
+            p.*"openFile" = box_function(function(string path, string mode, var this [named('this')]) {
+                var f = new 'FileHandle';
+                f.open(path, mode);
+                return box_stream(f);
+            });
+        }
+
+        function Process(var argv, var this [named('this')])
+        {
+            var a = this.get_attribute_hash();
+            var array_constructor = JavaScript.__fetch_global("__Array");
+            a["argv"] = JavaScript.JSObject.construct(null, array_constructor, argv);
+
+            a["stdin"] = JavaScript.FileStream.box_stream(getstdin());
+            a["stderr"] = JavaScript.FileStream.box_stream(getstderr());
+            a["stdout"] = JavaScript.FileStream.box_stream(getstdout());
+            //a["env"] =
+        }
+    }
+
+    namespace FileStream
+    {
+        function box_stream(var phandle)
+        {
+            var fs_constructor = JavaScript.__fetch_global("FileStream");
+            return JavaScript.JSObject.construct(null, fs_constructor, phandle);
+        }
+
+        function get_FileStream_prototype(var obj_proto)
+        {
+            using JavaScript.JSObject.box_function;
+            var p = new JavaScript.JSObject(obj_proto, null);
+
+            p.*"write" = box_function(function(string str, var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                f.print(str);
+            });
+
+            p.*"writeLine" = box_function(function(string str, var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                f.print(str + "\n");
+            });
+
+            p.*"close" = box_function(function(var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                f.close();
+            });
+
+            p.*"isClosed" = box_function(function(var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                return f.is_closed();
+            });
+
+            //p.*"read" = box_function(function(var this [named('this')]) {
+            //    var a = this.get_attribute_hash();
+            //    var f = a["__PARROT_HANDLE__"];
+                // TODO: What?
+            //});
+
+            p.*"readLine" = box_function(function(var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                string l = f.readline();
+                return JavaScript.String.box_parrot_string(l);
+            });
+
+            p.*"eof" = box_function(function(var this [named('this')]) {
+                var a = this.get_attribute_hash();
+                var f = a["__PARROT_HANDLE__"];
+                return f.eof();
+            });
+
+            return p;
+        }
+
+        function FileStream(var phandle, var this [named('this')])
+        {
+            var a = this.get_attribute_hash();
+            a["__PARROT_HANDLE__"] = phandle;
+        }
+    }
+
+    function __SETUP_COMMON__[anon,load,init]()
+    {
+        var object_constructor = JavaScript.__fetch_global("Object");
+        var object_proto = object_constructor.*"prototype";
+
+        using JavaScript.FileStream.FileStream;
+        var fs_proto = JavaScript.FileStream.get_FileStream_prototype(object_proto);
+        var fs = JavaScript.JSObject.box_function(FileStream, fs_proto);
+        JavaScript.__store_global("FileStream", fs);
+
+        using JavaScript.Process.Process;
+        var p_proto = JavaScript.Process.get_Process_prototype(object_proto);
+        var p = JavaScript.JSObject.box_function(Process, p_proto);
+        JavaScript.__store_global("Process", p);
+    }
+}

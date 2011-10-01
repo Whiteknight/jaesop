@@ -128,13 +128,19 @@ def(wast, "Program", {
             //"        var(Rosella.initialize_rosella)();\n" +
             //"        var(Rosella.load_bytecode_file)('./stage0/runtime/jsobject.pbc');\n" +
             "    load_bytecode('./stage0/runtime/jsobject.pbc');\n" +
+            "    load_bytecode('./stage0/runtime/common.pbc');\n" +
             loadlibs.map(function(l) { return "    load_bytecode('" + l + "');\n"; }) +
             "}\n\n" +
             "function __main__[main,anon](var arguments)\n" +
             "{\n" +
             "    using JavaScript.JSObject.box_function;\n" +
             "    using JavaScript.__store_global;\n" +
+            "    using JavaScript.__fetch_global;\n" +
             "    try {\n" +
+            "        /* Setup the process */\n" +
+            "        var __process_const = __fetch_global('Process');\n" +
+            "        var __process = JavaScript.JSObject.construct(null, __process_const, arguments);\n" +
+            "        __store_global('process', __process);\n\n" +
             "        /* Box global functions */\n" +
             "        var __f;\n";
         wx += this.children.map(function(c) {
