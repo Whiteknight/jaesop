@@ -444,7 +444,12 @@ def(expr, "NewOperator", {
 def(expr, "MemberExpr", {
     addMember : function(m) { this.children.push(m); },
     toWinxed : function(st) {
-        return this.children.map(function(c) { return c.wrapWinxed(st); }).join(".");
+        var wx = this.children[0].wrapWinxed(st);
+        if (this.children[1].nodeType == "Literal")
+            wx += ".*'" + this.children[1].wrapWinxed(st) + "'";
+        else
+            wx += "." + this.children[1].wrapWinxed(st);
+        return wx;
     }
 });
 
