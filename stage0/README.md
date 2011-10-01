@@ -19,10 +19,9 @@ features have been purposefully omitted and will not be supported:
 This is a list of items which are yet to be done, but should be implemented
 before stage 0 is called "complete" and usable for stage 1:
 
-* switch/case/default statements
-* new String()
 * methods on Object
 * methods on Array
+* methods on String
 * pcre bindings and RegExpExpr
 * Handling empty statements
 

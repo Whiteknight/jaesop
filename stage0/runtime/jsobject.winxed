@@ -175,6 +175,15 @@ namespace JavaScript
             return attrs_iter;
         }
 
+        function get_string[vtable]()
+        {
+            var s = self.*"__STRING_CONTENTS__";
+            if (s != null)
+                return string(s);
+            s = var(self.*"toString")(self:[named('this')]);
+            return string(s);
+        }
+
         function invoke[vtable](var args [slurpy], var this [named('this'),optional])
         {
             var f = self.*"__CODE_PMC__";
@@ -300,9 +309,15 @@ namespace JavaScript
     // ResizablePMCArray
     namespace Array
     {
+        function box_parrot_array[anon](var array)
+        {
+            var array_constructor = __fetch_global("__Array");
+            return JavaScript.JSObject.construct(null, array_constructor, array);
+        }
+
         function get_array_contents[anon](var jsobj)
         {
-            var a = get_attribute_hash(jsobj);
+            var a = jsobj.get_attribute_hash();
             return a["__ARRAY_CONTENTS__"];
         }
 
@@ -341,7 +356,80 @@ namespace JavaScript
         {
             var a = this.get_attribute_hash();
             a["__ARRAY_CONTENTS__"] = args;
-            a["length"] = 0;
+            a["length"] = elements(args);
+        }
+
+        function Array_internal(var array, var this [named("this")])
+        {
+            var a = this.get_attribute_hash();
+            a["__ARRAY_CONTENTS__"] = array;
+            a["length"] = elements(array);
+            a[ATTR_NAME_CONSTRUCTOR] = __fetch_global("Array");
+        }
+    }
+
+    namespace String
+    {
+        function box_parrot_string(string s)
+        {
+            var string_constructor = __fetch_global("String");
+            return JavaScript.JSObject.construct(null, string_constructor, s);
+        }
+
+        function get_string_contents[anon](var jsobj)
+        {
+            var a = jsobj.get_attribute_hash();
+            var s = a["__STRING_CONTENTS__"];
+            return string(s);
+        }
+
+        function get_String_prototype[anon](var obj_proto)
+        {
+            using JavaScript.JSObject.box_function;
+            var p = new JSObject(obj_proto, null);
+
+            p.*"toString" = box_function(function(var this [named]) {
+                return this;
+            });
+
+            p.*"indexOf" = box_function(function(string search, int start [optional], int has_s [opt_flag], var this [named]) {
+                if (!has_s)
+                    start = 0;
+                string s = get_string_contents(this);
+                int idx;
+                ${ index idx, s, search, start };
+                return idx;
+            });
+
+            p.*"split" = box_function(function(string delim, var this [named('this')]) {
+                string s = get_string_contents(this);
+                var a = split(delim, s);
+                return JavaScript.JSObject.Array.box_parrot_array(a);
+            });
+
+            p.*"substr" = box_function(function(int start, int len [optional], int has_len [opt_flag], var this [named('this')]) {
+                string s = get_string_contents(this);
+                string r;
+                if (has_len)
+                    r = substr(s, start, len);
+                else
+                    r = substr(s, start);
+                return box_parrot_string(r);
+            });
+
+            p.*"valueOf" = box_function(function(var this [named]) {
+                string s = get_string_contents(this);
+                return s;
+            });
+
+            return p;
+        }
+
+        function String(string str, var this [named('this')])
+        {
+            var a = this.get_attribute_hash();
+            a["__STRING_CONTENTS__"] = var(str);
+            a["length"] = length(str);
         }
     }
 
@@ -374,8 +462,16 @@ namespace JavaScript
         __store_global("Object", obj);
 
         using JavaScript.Array.Array;
+        using JavaScript.Array.Array_internal;
         var array_proto = JavaScript.Array.get_Array_prototype(obj_proto);
         var array = JavaScript.JSObject.box_function(Array, array_proto);
         __store_global("Array", array);
+        var array_internal = JavaScript.JSObject.box_function(Array_internal, array_proto);
+        __store_global("__Array", array_internal);
+
+        using JavaScript.String.String;
+        var string_proto = JavaScript.String.get_String_prototype(obj_proto);
+        var string_const = JavaScript.JSObject.box_function(String, string_proto);
+        __store_global("String", string_const);
     }
 }

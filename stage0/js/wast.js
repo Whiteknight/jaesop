@@ -151,9 +151,9 @@ def(wast, "Program", {
             "        /* Call the real main function */\n" +
             "        __js_main__(arguments);\n" +
             "    } catch (__e__) {\n" +
-            "        string __msg__ = string(__e__.payload);\n" +
-            "        if (__msg__ == null) __msg__ = string(__e__.message);\n" +
-            "        say(__msg__);\n" +
+            "        var __payload = __e__.payload;\n" +
+            "        string __msg = (__payload == null ? __e__.message : string(__payload));\n" +
+            "        say(__msg);\n" +
             "        for (string bt in __e__.backtrace_strings())\n" +
             "            say(bt);\n" +
             "    }\n" +
