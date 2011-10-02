@@ -126,6 +126,11 @@ namespace JavaScript
 
         function get_pmc_keyed[vtable](var key)
         {
+            if (key instanceof 'Integer') {
+                var a = self.*"__ARRAY_CONTENTS__";
+                if (a != null && key >= 0 && elements(a) > key)
+                    return a[int(key)];
+            }
             return self.*(string(key));
         }
 
@@ -330,11 +335,9 @@ namespace JavaScript
             var p = new JSObject(obj_proto, null);
 
             p.*"__GET_ITER__" = box_function(function(var this [named]) {
-                // TODO: Actually, we need to iterate over the array contents
-                //       AND the rest of the JSObject attributes
-                var c = this.get_attribute_hash();
+                var a = this.*"__ARRAY_CONTENTS__";
                 var c_iter;
-                ${ iter c_iter, c };
+                ${ iter c_iter, a };
                 return c_iter;
             });
 
