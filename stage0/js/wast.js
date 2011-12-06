@@ -163,8 +163,8 @@ def(wast, "MainFunctionDecl", {
         var wx = "function __js_main__[anon](var arguments)\n" +
             "{\n" +
             FUNC_ENTRY;
-        emitter.increase_indent();
-        var stmts = this.children.map(function(c) { return c.toWinxed(st) + ";\n"; }).join("");
+        //emitter.increase_indent();
+        var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
 
         var fwd_fetch = "";
         for (var g in st_globals) {
@@ -178,10 +178,10 @@ def(wast, "MainFunctionDecl", {
         wx += fwd_fetch;
 
         wx += emitter.emit("/* Begin user code */\n") +
-            emitter.emit(stmts + "\n") +
+            stmts + "\n" +
             emitter.emit("/* End user code */\n") +
             "}";
-        emitter.decrease_indent();
+        //emitter.decrease_indent();
         return wx;
     }
 });
@@ -199,7 +199,7 @@ def(wast, "FunctionDecl", {
             FUNC_ENTRY;
 
         emitter.increase_indent();
-        var stmts = this.children.map(function(c) { return c.toWinxed(st) + ";\n"; }).join("\n");
+        var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st) + ";\n"); }).join("\n");
 
         var fwd_fetch = "";
         for (var gul in st.globals_seen_locally) {
@@ -212,7 +212,7 @@ def(wast, "FunctionDecl", {
         wx += fwd_fetch;
 
         wx += emitter.emit("/* Begin user code */\n") +
-            emitter.emit(stmts + (stmts == "" ? "" : ";\n")) +
+            stmts + (stmts == "" ? "" : ";\n") +
             emitter.emit("/* End user code */\n") +
             "}";
         emitter.decrease_indent();
@@ -229,16 +229,16 @@ def(wast, "ClosureDecl", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
         st = new SymbolTable(st);
-        var wx = emitter.emit("JavaScript.JSObject.box_function(\n");
+        var wx = "JavaScript.JSObject.box_function(\n";
         emitter.increase_indent();
         wx += emitter.emit("function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {\n");
         emitter.increase_indent();
-        var stmts = this.children.map(function(c) { return "\n" + c.toWinxed(st); }).join(";");
+        var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
         for (var gsl in st.globals_seen_locally)
             wx += emitter.emit("var " + gsl + " = __fetch_global('" + gsl + "');\n");
-        wx += stmts + ";";
+        wx += stmts;
         emitter.decrease_indent();
-        wx += emitter.emit("}");
+        wx += emitter.emit("}\n");
         emitter.decrease_indent();
         wx += emitter.emit(")");
         return wx;
@@ -291,7 +291,7 @@ def(wast, "VariableDeclare", {
             var d = "var " + n;
             if (this.initializer != null)
                 d += " = " + this.initializer.toWinxed(st);
-            wx += emitter.emit(d);
+            wx += d;
             st.addLocal(n);
         } else {
             // In the top-level scope. The variable is already declared as a
@@ -299,7 +299,7 @@ def(wast, "VariableDeclare", {
             var d = n
             if (this.initializer != null)
                 d += " = " + this.initializer.toWinxed(st) + "; __store_global('" + n + "', " + n + ")";
-            emitter.emit(d);
+            wx += d;
             st.addGlobal(n);
         }
         return wx;
@@ -375,9 +375,12 @@ def(wast, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
     toWinxed : function(st) {
         // TODO: Need to redo this to fetch the Array constructor
-        return "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__" +
-            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
-            ")";
+        var wx = "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__,\n";
+        emitter.increase_indent();
+        wx += this.children.map(function(c) { return emitter.emit(c.toWinxed(st)); }).join(",\n") + "\n";
+        emitter.decrease_indent();
+        wx += emitter.emit(")");
+        return wx;
     }
 });
 
@@ -427,12 +430,10 @@ def(wast, "MethodInvokeExpr", {
         else
             obj= "(" + this.object.toWinxed(st) + ")";
 
-        wx += "var(" + obj + ".*'" + n + "')(";
+        wx += "var(" + obj + ".*'" + n + "')(\n";
         emitter.increase_indent();
-        wx += emitter.emit(
-                this.children.map(function(c) { return "\n" + c.toWinxed(st) + ","; }).join("")
-            ) + "\n";
-        wx += emitter.emit(obj + ":[named('this')]");
+        wx += this.children.map(function(c) { return emitter.emit(c.toWinxed(st) + ","); }).join("\n") + "\n";
+        wx += emitter.emit(obj + ":[named('this')]\n");
         emitter.decrease_indent();
         wx += emitter.emit(")");
         return wx;
