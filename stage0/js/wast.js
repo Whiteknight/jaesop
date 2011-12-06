@@ -1,10 +1,8 @@
 var sys = require("sys");
 var prototypes = exports.prototypes = [];
 var constructors = exports.constructors = [];
-var FUNC_INDENT = "";
-var STMT_INDENT = "    ";
-var ARG_INDENT =  "        ";
-var BLCK_INDENT = "        ";
+var emitter = require("./emitter");
+emitter = emitter.emitter;
 var FUNC_ENTRY = "    /* Standard preamble */\n" +
                  "    using JavaScript.__fetch_global;\n" +
                  "    using JavaScript.__store_global;\n" +
@@ -76,7 +74,6 @@ var wast = prototypes.base = {
 
     winxedValue : function(v) { w.literalValue = v; },
     toWinxed : function(st) { return "[!!! Wast error: " + this.nodeType + " has no .toWinxed() method !!!]"; },
-    wrapWinxed : function(st) { return this.toWinxed(st); },
     toWinxedError : function(msg) { return "[!!! Wast error: " + msg + " !!!]"; }
 }
 
@@ -102,19 +99,6 @@ var def = function def(proto, name, extend, construct) {
     };
     return prototypes[name];
 }
-
-var expr = prototypes.expr = wast.clone();
-var stmt = prototypes.stmt = wast.clone();
-var blck = prototypes.blck = wast.clone({
-    wrapWinxed : function(st) {
-        var lines = this.toWinxed(st).split("\n");
-        var wx = STMT_INDENT + lines[0] + "\n";
-        for (var i = 1; i < lines.length - 1; i++)
-            wx += BLCK_INDENT + lines[i] + "\n";
-        wx += STMT_INDENT + lines[lines.length - 1];
-        return wx;
-    }
-});
 
 def(wast, "Program", {
     addFunction: function(f) { this.children.push(f); },
@@ -146,7 +130,7 @@ def(wast, "Program", {
             "        var __f;\n";
         wx += this.children.map(function(c) {
             if (c.name != null) {
-                var name = c.name.wrapWinxed(st);
+                var name = c.name.toWinxed(st);
                 st.addGlobal(name);
                 return "        using " + name + ";\n" +
                     "        __f = box_function(" + name + ");\n" +
@@ -165,7 +149,7 @@ def(wast, "Program", {
             "            say(bt);\n" +
             "    }\n" +
             "}\n\n";
-        wx += this.children.map(function(c) { return c.wrapWinxed(); }).join("\n\n") + "\n";
+        wx += this.children.map(function(c) { return c.toWinxed(); }).join("\n\n") + "\n";
         //wx += "} // JavaScript HLL\n";
         return wx;
     }
@@ -176,26 +160,28 @@ def(wast, "MainFunctionDecl", {
     toWinxed : function() {
         var st = new SymbolTable(null);
         st.declareVarsLocally(false);
-        var wx = "function __js_main__[anon](var argumentss)\n" +
+        var wx = "function __js_main__[anon](var arguments)\n" +
             "{\n" +
             FUNC_ENTRY;
-        var stmts = this.children.map(function(c) { return STMT_INDENT + c.wrapWinxed(st) + ";\n"; }).join("");
+        emitter.increase_indent();
+        var stmts = this.children.map(function(c) { return c.toWinxed(st) + ";\n"; }).join("");
 
         var fwd_fetch = "";
         for (var g in st_globals) {
             if (g in st.globals_seen_locally)
-                fwd_fetch += STMT_INDENT + "var " + g + " = __fetch_global('" + g + "');\n";
+                fwd_fetch += emitter.emit("var " + g + " = __fetch_global('" + g + "');\n");
             else
-                fwd_fetch += STMT_INDENT + "var " + g + ";\n";
+                fwd_fetch += emitter.emit("var " + g + ";\n");
         }
         if (fwd_fetch != "")
-            fwd_fetch = STMT_INDENT + "/* Declare and fetch global values */\n" + fwd_fetch + "\n";
+            fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") + fwd_fetch + "\n";
         wx += fwd_fetch;
 
-        wx += STMT_INDENT + "/* Begin user code */\n" +
-            stmts + "\n" +
-            STMT_INDENT + "/* End user code */\n" +
+        wx += emitter.emit("/* Begin user code */\n") +
+            emitter.emit(stmts + "\n") +
+            emitter.emit("/* End user code */\n") +
             "}";
+        emitter.decrease_indent();
         return wx;
     }
 });
@@ -207,25 +193,29 @@ def(wast, "FunctionDecl", {
     toWinxed : function() {
         var st = new SymbolTable(null);
         st.declareVarsLocally(true);
-        var this_name = this.name.wrapWinxed(st);
-        var wx = "function " + this_name + "[anon] (" + this.args.wrapWinxed(st) + ")\n" +
+        var this_name = this.name.toWinxed(st);
+        var wx = "function " + this_name + "[anon] (" + this.args.toWinxed(st) + ")\n" +
             "{\n" +
             FUNC_ENTRY;
-        var stmts = this.children.map(function(c) { return STMT_INDENT + c.wrapWinxed(st) + ";\n"; }).join("\n");
+
+        emitter.increase_indent();
+        var stmts = this.children.map(function(c) { return c.toWinxed(st) + ";\n"; }).join("\n");
 
         var fwd_fetch = "";
         for (var gul in st.globals_seen_locally) {
             if (gul != this_name)
-                fwd_fetch += STMT_INDENT + "var " + gul + " = __fetch_global('" + gul + "');\n";
+                fwd_fetch += emitter.emit("var " + gul + " = __fetch_global('" + gul + "');\n");
         }
         if (fwd_fetch != "")
-            fwd_fetch = STMT_INDENT + "/* Declare and fetch global values */\n" + fwd_fetch + "\n";
+            fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") +
+                        fwd_fetch + "\n";
         wx += fwd_fetch;
 
-        wx += STMT_INDENT + "/* Begin user code */\n" +
-            stmts + (stmts == "" ? "" : ";\n") +
-            STMT_INDENT + "/* End user code */\n" +
+        wx += emitter.emit("/* Begin user code */\n") +
+            emitter.emit(stmts + (stmts == "" ? "" : ";\n")) +
+            emitter.emit("/* End user code */\n") +
             "}";
+        emitter.decrease_indent();
         return wx;
     }
 });
@@ -239,24 +229,30 @@ def(wast, "ClosureDecl", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
         st = new SymbolTable(st);
-        var wx = "JavaScript.JSObject.box_function(function (" + this.args.map(function(a) { return a.wrapWinxed(st); }).join(", ") + ") {\n";
-        var stmts = this.children.map(function(c) { return "\n" + BLCK_INDENT + c.wrapWinxed(st); }).join(";");
+        var wx = emitter.emit("JavaScript.JSObject.box_function(\n");
+        emitter.increase_indent();
+        wx += emitter.emit("function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {\n");
+        emitter.increase_indent();
+        var stmts = this.children.map(function(c) { return "\n" + c.toWinxed(st); }).join(";");
         for (var gsl in st.globals_seen_locally)
-            wx += BLCK_INDENT + "var " + gsl + " = __fetch_global('" + gsl + "');\n";
-        wx += stmts +
-            "; })";
+            wx += emitter.emit("var " + gsl + " = __fetch_global('" + gsl + "');\n");
+        wx += stmts + ";";
+        emitter.decrease_indent();
+        wx += emitter.emit("}");
+        emitter.decrease_indent();
+        wx += emitter.emit(")");
         return wx;
     }
 });
 
-def(stmt, "ReturnStatement", {
+def(wast, "ReturnStatement", {
     addValue : function(v) { this.children.push(v); },
     toWinxed : function() {
-        return "return " + (this.children.length == 1 ? this.children[0].wrapWinxed() : "");
+        return emitter.emit("return " + (this.children.length == 1 ? this.children[0].toWinxed() : ""));
     }
 });
 
-def(expr, "Literal", {
+def(wast, "Literal", {
     value : "",
     literalValue : function(v) { this.value = v.toString(); },
     toWinxed : function() { return this.value; }
@@ -265,7 +261,7 @@ def(expr, "Literal", {
 def(wast, "ParametersList", {
     addParameter : function(p) { this.children.push(p); },
     toWinxed : function(st) {
-        return this.children.map(function(c) { return c.wrapWinxed(st) + ", "; }).join("") +
+        return this.children.map(function(c) { return c.toWinxed(st) + ", "; }).join("") +
             "var this [named,optional]";
     }
 });
@@ -280,7 +276,7 @@ def(wast, "ParameterDeclare", {
     }
 });
 
-def(stmt, "VariableDeclare", {
+def(wast, "VariableDeclare", {
     initializer : null,
     setName : function(n) { this.name = n; },
     setInitializer : function(i) { this.initializer = i; },
@@ -292,23 +288,25 @@ def(stmt, "VariableDeclare", {
 
         if (st.declare_vars_locally == true) {
             // In a normal function. Declare the variable like normal.
-            wx = "var " + n;
+            var d = "var " + n;
             if (this.initializer != null)
-                wx += " = " + this.initializer.wrapWinxed(st);
+                d += " = " + this.initializer.toWinxed(st);
+            wx += emitter.emit(d);
             st.addLocal(n);
         } else {
             // In the top-level scope. The variable is already declared as a
             // global. Initialize it if necessary, otherwise do nothing.
-            wx = n;
+            var d = n
             if (this.initializer != null)
-                wx += " = " + this.initializer.wrapWinxed(st) + "; __store_global('" + n + "', " + n + ")";
+                d += " = " + this.initializer.toWinxed(st) + "; __store_global('" + n + "', " + n + ")";
+            emitter.emit(d);
             st.addGlobal(n);
         }
         return wx;
     }
 });
 
-def(expr, "VariableName", {
+def(wast, "VariableName", {
     setName : function(n) { this.name = n; },
     toWinxed : function(st) {
         var n = this.name.toString();
@@ -327,18 +325,21 @@ def(wast, "StatementBlock", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
         st = new SymbolTable(st);
-        return "{\n" +
-            this.children.map(function(c) { return BLCK_INDENT + c.wrapWinxed(st) + ";\n"; }).join("") +
-            STMT_INDENT + "}";
+        var wx = "{\n";
+        emitter.increase_indent();
+        wx += this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
+        emitter.decrease_indent();
+        wx += emitter.emit("}");
+        return wx;
     }
 });
 
-def(stmt, "Assignment", {
+def(wast, "Assignment", {
     setDestination : function(d) { this.children[0] = d; },
     setValue : function(v) { this.children[1] = v; },
     toWinxed : function(st) {
-        var c1 = this.children[0].wrapWinxed(st);
-        var wx = c1 + " = " + this.children[1].wrapWinxed(st);
+        var c1 = this.children[0].toWinxed(st);
+        var wx = c1 + " = " + this.children[1].toWinxed(st);
         if (this.children[0].nodeType == "VariableName") {
             if (st.findSymbol(c1) == "global")
                 wx += "; __store_global('" + c1 + "', " + c1 + ")";
@@ -347,16 +348,16 @@ def(stmt, "Assignment", {
     }
 });
 
-def(expr, "BinaryOperator", {
+def(wast, "BinaryOperator", {
     op : "",
     setOperator : function(o) { this.op = o; },
     setOperands : function(a,b) { this.children.push(a); this.children.push(b); },
     toWinxed : function(st) {
-        return this.children.map(function(c) { return c.wrapWinxed(st); }).join(" " + this.op + " ");
+        return this.children.map(function(c) { return c.toWinxed(st); }).join(" " + this.op + " ");
     }
 });
 
-def(expr, "UnaryOperator", {
+def(wast, "UnaryOperator", {
     op : "",
     location : "prefix",
     setLocation : function(l) { this.location = l; },
@@ -364,133 +365,148 @@ def(expr, "UnaryOperator", {
     setOperand : function(a) { this.children.push(a); },
     toWinxed : function(st) {
         if (this.location == "prefix")
-            return this.op + " " + this.children[0].wrapWinxed(st);
+            return this.op + " " + this.children[0].toWinxed(st);
         else if (this.location == "postfix")
-            return this.children[0].wrapWinxed(st) + this.op;
+            return this.children[0].toWinxed(st) + this.op;
     }
 });
 
-def(expr, "ArrayLiteral", {
+def(wast, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
     toWinxed : function(st) {
         // TODO: Need to redo this to fetch the Array constructor
         return "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__" +
-            this.children.map(function(c) { return ", " + c.wrapWinxed(st); }).join("") +
+            this.children.map(function(c) { return ", " + c.toWinxed(st); }).join("") +
             ")";
     }
 });
 
-def(expr, "jsObjectLiteral", {
+def(wast, "jsObjectLiteral", {
     addElement : function(n, e) { this.children[n] = e; },
     toWinxed : function(st) {
-        var wx = "new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__";
+        var wx = emitter.emit("new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__");
+        emitter.increase_indent();
         for (var key in this.children)
-            wx += ",\n" + ARG_INDENT + this.children[key].wrapWinxed(st) + ":[named('" + key.toString() + "')]";
-        return wx + ")";
+            wx += ",\n" + emitter.emit(this.children[key].toWinxed(st) + ":[named('" + key.toString() + "')]");
+        emitter.decrease_indent();
+        return wx + emitter.emit(")");
     }
 });
 
-def(expr, "SubInvokeExpr", {
+def(wast, "SubInvokeExpr", {
     setName : function(n) { this.name = n; },
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function(st) {
-        var wx = "";
-        wx += this.name.wrapWinxed(st) + "(" +
-            this.children.map(function(c) { return c.wrapWinxed(st); }).join(",\n" + ARG_INDENT) +
-            ")";
+        var wx = this.name.toWinxed(st) + "(";
+        if (this.children.length == 0)
+            return wx + ")";
+        wx += "\n";
+        emitter.increase_indent();
+        wx += emitter.emit(this.children.map(function(c) { return c.toWinxed(st); }).join(",\n")) + "\n";
+        emitter.decrease_indent();
+        wx += emitter.emit(")");
         return wx;
     }
 });
 
-def(expr, "MethodInvokeExpr", {
+def(wast, "MethodInvokeExpr", {
     object : null,
     setObject : function(o) { this.object = o; },
     setName : function(n) { this.name = n; },
     addArgument : function(a) { this.children.push(a); },
     toWinxed : function(st) {
         var wx = "";
-        var n = this.name.wrapWinxed(st);
+        var n = this.name.toWinxed(st);
 
         if (this.object == null)
             return this.toWinxedError("Object cannot be null in a MethodInvokeExpr (" + n + ")");
+
         var obj = "";
         if (this.object.nodeType == "Literal" || this.object.nodeType == "MemberExpr" || this.object.nodeType == "VariableName")
-            obj = this.object.wrapWinxed(st);
+            obj = this.object.toWinxed(st);
         else
-            obj= "(" + this.object.wrapWinxed(st) + ")";
+            obj= "(" + this.object.toWinxed(st) + ")";
 
-        wx += "var(" + obj + ".*'" + n + "')(" +
-            this.children.map(function(c) { return "\n" + ARG_INDENT + c.wrapWinxed(st) + ","; }).join("") +
-            "\n" + ARG_INDENT + obj + ":[named('this')])";
+        wx += "var(" + obj + ".*'" + n + "')(";
+        emitter.increase_indent();
+        wx += emitter.emit(
+                this.children.map(function(c) { return "\n" + c.toWinxed(st) + ","; }).join("")
+            ) + "\n";
+        wx += emitter.emit(obj + ":[named('this')]");
+        emitter.decrease_indent();
+        wx += emitter.emit(")");
         return wx;
     }
 });
 
-def(expr, "NewOperator", {
+def(wast, "NewOperator", {
     name : null,
     setName : function(n) { this.name = n; },
     addOperand : function(a) { this.children.push(a); },
     toWinxed : function(st) {
         var wx = "JavaScript.JSObject.construct(null, ";
         if (this.name.nodeType == "Literal" || this.name.nodeType == "MemberExpr" || this.name.nodeType == "VariableName")
-            wx += this.name.wrapWinxed(st);
+            wx += this.name.toWinxed(st);
         else
-            wx += "(" + this.name.wrapWinxed(st) + ")";
-        wx += this.children.map(function(c) { return ",\n" + ARG_INDENT + c.wrapWinxed(st); }).join("") + ")";
+            wx += "(" + this.name.toWinxed(st) + ")";
+        emitter.increase_indent();
+        wx += emitter.emit(this.children.map(function(c) { return ",\n" + c.toWinxed(st); }).join("") + ")");
         return wx;
     }
 });
 
-def(expr, "MemberExpr", {
+def(wast, "MemberExpr", {
     addMember : function(m) { this.children.push(m); },
     toWinxed : function(st) {
-        var wx = this.children[0].wrapWinxed(st);
+        var wx = this.children[0].toWinxed(st);
         if (this.children[1].nodeType == "Literal")
-            wx += ".*'" + this.children[1].wrapWinxed(st) + "'";
+            wx += ".*'" + this.children[1].toWinxed(st) + "'";
         else
-            wx += "." + this.children[1].wrapWinxed(st);
+            wx += "." + this.children[1].toWinxed(st);
         return wx;
     }
 });
 
-def(expr, "KeyedIndexExpr", {
+def(wast, "KeyedIndexExpr", {
     addKey : function(m) { this.children.push(m); },
     toWinxed : function(st) {
-        return this.children[0].wrapWinxed(st) + "[" + this.children[1].wrapWinxed(st) + "]";
+        return this.children[0].toWinxed(st) + "[" + this.children[1].toWinxed(st) + "]";
     }
 });
 
-def(blck, "WhileStatement", {
+def(wast, "WhileStatement", {
     setCondition : function(c) { this.children[0] = c; },
     setBlock : function(c) { this.children[1] = c; },
     toWinxed: function(st) {
-        return "while (" + this.children[0].wrapWinxed(st) + ") " + this.children[1].wrapWinxed(st);
+        return "while (" + this.children[0].toWinxed(st) + ") \n" +
+            emitter.emit(this.children[1].toWinxed(st));
     }
 });
 
-def(stmt, "DoWhileStatement", {
+def(wast, "DoWhileStatement", {
     setCondition : function(c) { this.children[1] = c; },
     setBlock : function(c) { this.children[0] = c; },
     toWinxed: function(st) {
-        return "do " + this.children[0].wrapWinxed(st) +
-            " while (" + this.children[1].wrapWinxed(st) + ")";
+        return "do \n" +
+            emitter.emit(this.children[0].toWinxed(st)) + "\n" +
+            emitter.emit("while (" + this.children[1].toWinxed(st) + ")");
     }
 });
 
-def(stmt, "IfStatement", {
+def(wast, "IfStatement", {
     setCondition : function(c) { this.children[0] = c; },
     thenStatement : function(s) { this.children[1] = s; },
     elseStatement : function(s) { this.children[2] = s; },
     toWinxed : function(st) {
-        var wx = "if (" + this.children[0].wrapWinxed(st) + ")" +
-            this.children[1].wrapWinxed(st);
+        var wx = "if (" + this.children[0].toWinxed(st) + ")\n" +
+            emitter.emit(this.children[1].toWinxed(st));
         if (this.children.length >= 3)
-            wx += " else " + this.children[2].wrapWinxed(st);
+            wx += "\nelse\n" + emitter.emit(this.children[2].toWinxed(st));
         return wx;
     }
 });
 
-def(stmt, "ForStatement", {
+def(wast, "ForStatement", {
     setCondition : function(a, b, c) {
         this.children[0] = a;
         this.children[1] = b;
@@ -498,32 +514,32 @@ def(stmt, "ForStatement", {
     },
     setStatement : function(s) { this.children[3] = s; },
     toWinxed : function(st) {
-        return "for (" + this.children[0].wrapWinxed(st) + " ; " +
-            this.children[1].wrapWinxed(st) + " ; " +
-            this.children[2].wrapWinxed(st) + ") " +
-            this.children[3].wrapWinxed(st);
+        return "for (" + this.children[0].toWinxed(st) + " ; " +
+            this.children[1].toWinxed(st) + " ; " +
+            this.children[2].toWinxed(st) + ")\n" +
+            emitter.emit(this.children[3].toWinxed(st));
     }
 });
 
-def(stmt, "ForInStatement", {
+def(wast, "ForInStatement", {
     setEnumerator : function(a, b) {
         this.children[0] = a;
         this.children[1] = b;
     },
     setStatement : function(s) { this.children[2] = s; },
     toWinxed : function(st) {
-        return "for (" + this.children[0].wrapWinxed(st) + " in " + this.children[1].wrapWinxed(st) + ") "
-            + this.children[2].wrapWinxed(st);
+        return "for (" + this.children[0].toWinxed(st) + " in " + this.children[1].toWinxed(st) + ")\n"
+            + emitter.emit(this.children[2].toWinxed(st));
     }
 });
 
-def(expr, "ConditionalExpr", {
+def(wast, "ConditionalExpr", {
     setCondition : function(c) { this.children[0] = c; },
     setOptions : function(a, b) { this.children[1] = a; this.children[2] = b; },
     toWinxed : function(st) {
-        return this.children[0].wrapWinxed(st) + " ? " +
-            this.children[1].wrapWinxed(st) + " : " +
-            this.children[2].wrapWinxed(st);
+        return this.children[0].toWinxed(st) + " ? " +
+            this.children[1].toWinxed(st) + " : " +
+            this.children[2].toWinxed(st);
     }
 });
 
@@ -531,7 +547,9 @@ def(wast, "TryStatement", {
     setTryBlock : function(b) { this.children[0] = b; },
     setCatchClause : function(c) { this.children[1] = c; },
     toWinxed : function(st) {
-        return "try " + this.children[0].wrapWinxed(st) + this.children[1].wrapWinxed(st);
+        return "try\n" +
+            emitter.emit(this.children[0].toWinxed(st)) + "\n" +
+            emitter.emit(this.children[1].toWinxed(st));
     }
 });
 
@@ -539,77 +557,86 @@ def(wast, "CatchClause", {
     setExceptionVar : function(e) { this.children[0] = e; },
     setCatchBlock : function(b) { this.children[1] = b; },
     toWinxed : function(st) {
-        wx = " catch (";
+        wx = "catch (";
         var ex = null;
         if (this.children[0] != null) {
-            ex = this.children[0].wrapWinxed(st);
+            ex = this.children[0].toWinxed(st);
             wx += "__exception__";
         }
-        wx += ") ";
+        wx += ")\n";
         if (ex == null) {
-            wx += this.children[1].wrapWinxed(st);
+            wx += this.children[1].toWinxed(st);
         } else {
             var st = new SymbolTable(st);
             st.addLocal(ex);
-            wx += "{\n" +
-                BLCK_INDENT + "var " + ex + " = __exception__.payload;\n" +
-                BLCK_INDENT + "if (" + ex + " == null) " + ex + " = __exception__.message;\n" +
-                BLCK_INDENT + this.children[1].wrapWinxed(st) + "\n" +
-                STMT_INDENT + "}\n";
+            wx += emitter.emit("{\n");
+            emitter.increase_indent();
+            wx += emitter.emit("var " + ex + " = __exception__.payload;\n");
+            wx += emitter.emit("if (" + ex + " == null) " + ex + " = __exception__.message;\n");
+            wx += emitter.emit(this.children[1].toWinxed(st) + "\n");
+            emitter.decrease_indent();
+            wx += emitter.emit("}\n");
         }
         return wx;
     }
 });
 
-def(stmt, "ThrowStatement", {
+def(wast, "ThrowStatement", {
     setPayload : function(p) { this.children[0] = p; },
     toWinxed : function(st) {
         var wx = "__tmp = new 'Exception'; __tmp.payload = " + this.children[0].toWinxed(st) + "; throw(__tmp)";
         return wx;
-  }
+    }
 });
 
-def(stmt, "BreakStatement", {
+def(wast, "BreakStatement", {
     toWinxed : function(st) { return "break"; }
 });
 
-def(stmt, "ContinueStatement", {
+def(wast, "ContinueStatement", {
     toWinxed : function(st) { return "continue"; }
 });
 
-def(stmt, "SwitchStatement", {
+def(wast, "SwitchStatement", {
     setExpr : function(e) { this.children[0] = e; },
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
-        var wx = "switch (" + this.children[0].wrapWinxed(st) + ") {\n"
+        var wx = "switch (" + this.children[0].toWinxed(st) + ")\n" +
+            emitter.emit("{\n");
+        emitter.increase_indent();
         for (var i = 1; i < this.children.length; i++)
-            wx += BLCK_INDENT + this.children[i].wrapWinxed(st);
-        return wx + STMT_INDENT + "}";
+            wx += emitter.emit(this.children[i].toWinxed(st));
+        emitter.decrease_indent();
+        return wx + emitter.emit("}");
     }
 });
 
-def(stmt, "CaseStatement", {
+def(wast, "CaseStatement", {
     setValue : function(v) { this.children[0] = v; },
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
-        var wx = "case " + this.children[0].wrapWinxed(st) + ":\n";
+        var wx = "case " + this.children[0].toWinxed(st) + ":\n";
+        emitter.increase_indent();
         for (var i = 1; i < this.children.length; i++)
-            wx += BLCK_INDENT + "    " + this.children[i].wrapWinxed(st) + ";\n";
+            wx += emitter.emit(this.children[i].toWinxed(st) + ";\n");
+        emitter.decrease_indent();
         return wx;
     }
 });
 
-def(stmt, "DefaultStatement", {
+def(wast, "DefaultStatement", {
     addStatement : function(s) { this.children.push(s); },
     toWinxed : function(st) {
         var wx = "default:\n";
+        emitter.increase_indent();
         for (var i = 0; i < this.children.length; i++)
-            wx += BLCK_INDENT + "    " + this.children[i].wrapWinxed(st) + ";\n";
+            wx +=  emitter.emit(this.children[i].toWinxed(st) + ";\n");
+        emitter.decrease_indent();
         return wx;
     }
 });
 
-def(expr, "RegExprExpression", {
+def(wast, "RegExprExpression", {
     setPattern : function(p, m) {
         this.children[0] = p;
         this.children[1] = m;
