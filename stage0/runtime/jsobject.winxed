@@ -354,6 +354,20 @@ namespace JavaScript
                 return r;
             });
 
+            p.*"map" = box_function(function(var f, var this [named]) {
+                var a = this.*"__ARRAY_CONTENTS__";
+                var r = [];
+                for (int i = 0; i < elements(a); i++)
+                    r[i] = f(a[i]);
+                return box_parrot_array(r);
+            });
+
+            p.*"forEach" = box_function(function(var f, var this [named]) {
+                var a = this.*"__ARRAY_CONTENTS__";
+                for (int i = 0; i < elements(a); i++)
+                    f(a[i]);
+            });
+
             p.*"__DOES_ROLES__" = ["array", "hash"];
             return p;
         }
