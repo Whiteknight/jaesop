@@ -4,6 +4,10 @@ var argv = process.argv;
 var node_exe = argv.shift();
 var js2wx_exe = argv.shift().split("/").pop();
 
+
+// Stage 0 Driver Program
+// This function runs the stage 0 compiler. It parses JavaScript input to an
+// AST and eventually outputs Winxed code.
 function main(args) {
     var fs = require("fs");
     var compilerBase = require("./stage0/js2winxed");
@@ -14,6 +18,8 @@ function main(args) {
     var write = function (msg) { sys.puts(msg); };
     var loadlibs = [];
 
+    // Simple argument parsing. We don't have too many args to parse, so we
+    // don't need a fancy tool to do it.
     while(args.length > 0) {
         var arg = args.shift();
         if (arg == "--astdebug")
@@ -33,14 +39,15 @@ function main(args) {
 
     var infileText = fs.readFileSync(infile).toString();
 
+    // Parse JavaScript to AST
     var ast = compiler.parse(infileText);
     if (astdebug == 1) {
         sys.puts("AST: \n");
         dump(ast);
     }
 
+    // Convert AST to WAST
     var wast = ast.toWast();
-
     if (astdebug == 1) {
         sys.puts("\nWAST: \n");
         dump(wast);
@@ -52,20 +59,24 @@ function main(args) {
         write = function(msg) { fs.writeSync(outfileHandle, msg, 0); };
     }
 
+    // Generate Winxed from the WAST and output to file.
     var winxed = wast.toWinxed(loadlibs);
     write(winxed);
 }
 
+// Show a usage message
 function usageAndExit() {
     sys.puts("Usage: " + node_exe + " " + js2wx_exe + " [--astdebug] [-i pbc] [-o <wx_file>] <js_file>");
     process.exit(0);
 }
 
+// Show the version number
 function versionAndExit() {
     sys.puts(js2wx_exe + ": JS to Winxed compiler Version 0.0");
     process.exit(0);
 }
 
+// Dump to standard output
 function dump(x) {
     sys.puts(sys.inspect(x, false, 20));
 }
