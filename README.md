@@ -1,8 +1,10 @@
+# Jaesop JavaScript on Parrot
+
 Jaesop is JavaScript on Parrot. It is an experimental playground. It probably
 does not work, is not the best solution to the problem, and is not stable or
 usable. Awesome.
 
-=== STATUS ===
+## Status
 
 The current architecture for the "stage0" section borrows code from
 zaach/cafe. It uses Jison to parse JavaScript with JavaScript to produce an
@@ -19,12 +21,16 @@ something else.
 Currently, I only have a stage zero compiler, and it's only partially
 implemented.
 
-=== REQUIREMENTS ===
+## Requirements
 
-You need a modern Parrot and Winxed installed, with Rosella. You need node.js
-and jison.
+You need a modern **Parrot** and **Winxed** installed. **Rosella**, a separate
+Winxed runtime library, is used to implement the unit tests and test harness.
+Currently this is optional and is only required if you want to run tests. In the
+future Rosella may be required for more things.
 
-=== USAGE ===
+To build and run stage 0 you need **node.js** and **Jison**.
+
+## Usage
 
 To build the stage0 compiler and stage0 runtime, do this:
 
