@@ -207,8 +207,7 @@ def(wast, "FunctionDecl", {
                 fwd_fetch += emitter.emit("var " + gul + " = __fetch_global('" + gul + "');\n");
         }
         if (fwd_fetch != "")
-            fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") +
-                        fwd_fetch + "\n";
+            fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") + fwd_fetch + "\n";
         wx += fwd_fetch;
 
         wx += emitter.emit("/* Begin user code */\n") +
@@ -375,7 +374,11 @@ def(wast, "ArrayLiteral", {
     addElement : function(e) { this.children.push(e); },
     toWinxed : function(st) {
         // TODO: Need to redo this to fetch the Array constructor
-        var wx = "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__,\n";
+        var wx = "JavaScript.JSObject.construct(null, __ARRAY_CONSTRUCTOR__";
+        if (this.children.length == 0) {
+            return wx + ")"
+        }
+        wx += ",\n";
         emitter.increase_indent();
         wx += this.children.map(function(c) { return emitter.emit(c.toWinxed(st)); }).join(",\n") + "\n";
         emitter.decrease_indent();
@@ -460,9 +463,13 @@ def(wast, "MemberExpr", {
     addMember : function(m) { this.children.push(m); },
     toWinxed : function(st) {
         var wx = this.children[0].toWinxed(st);
-        if (this.children[1].nodeType == "Literal")
-            wx += ".*'" + this.children[1].toWinxed(st) + "'";
-        else
+        var child = this.children[1].toWinxed(st);
+        if (this.children[1].nodeType == "Literal") {
+            if (child.substring(0, 1) == "'" && child.substring(child.length - 1, child.length) == "'")
+                wx += ".*" + child;
+            else
+                wx += ".*'" + child + "'";
+        } else
             wx += "." + this.children[1].toWinxed(st);
         return wx;
     }
@@ -499,10 +506,17 @@ def(wast, "IfStatement", {
     thenStatement : function(s) { this.children[1] = s; },
     elseStatement : function(s) { this.children[2] = s; },
     toWinxed : function(st) {
-        var wx = "if (" + this.children[0].toWinxed(st) + ")\n" +
-            emitter.emit(this.children[1].toWinxed(st));
-        if (this.children.length >= 3)
-            wx += "\nelse\n" + emitter.emit(this.children[2].toWinxed(st));
+        var wx = "if (" + this.children[0].toWinxed(st) + ")\n";
+        emitter.increase_indent();
+        wx += emitter.emit(this.children[1].toWinxed(st)) + ";";
+        emitter.decrease_indent();
+        if (this.children.length >= 3) {
+            wx += "\n";
+            wx += emitter.emit("else\n");
+            emitter.increase_indent();
+            wx += emitter.emit(this.children[2].toWinxed(st));
+            emitter.decrease_indent();
+        }
         return wx;
     }
 });
