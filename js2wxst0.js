@@ -81,7 +81,6 @@ function dump(x) {
     sys.puts(sys.inspect(x, false, 20));
 }
 
-
 if (argv.length == 0 || argv[0] == "-h" || argv[0] == "--help")
     usageAndExit();
 if (argv[0] == "-V" || argv[0] == "--version")
