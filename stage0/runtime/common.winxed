@@ -1,5 +1,47 @@
 namespace JavaScript
 {
+    namespace Modules
+    {
+        function __get_module_registry[anon]()
+        {
+            var export_registry = JavaScript.__fetch_global("!!!MODULE_EXPORTS!!!");
+            if (export_registry == null) {
+                export_registry = {};
+                JavaScript.__store_global("!!!MODULE_EXPORTS!!!");
+            }
+            return export_registry;
+        }
+
+        function require(string modulename)
+        {
+            var export_registry = __get_module_registry();
+            if (exists export_registry[modulename])
+                return export_registry[modulename];
+
+            var exports = null;
+            try {
+                string fullname = "stage0/modules/" + modulename + ".pbc";
+                var lib = load_packfile(fullname);
+                if (!lib.is_initialized("load")) {
+                    for (var s in lib.subs_by_tag("load"))
+                        s();
+                    lib.mark_initialized("load");
+                }
+
+                if (!lib.is_initialized("js_main")) {
+                    var subs = lib.subs_by_tag("js_main");
+                    if (elements(subs) > 0)
+                        exports = subs[0]();
+                    lib.mark_initialized("js_main");
+                }
+                export_registry[modulename] = exports;
+            } catch(e) {
+                // TODO: How to handle error here?
+            }
+            return exports;
+        }
+    }
+
     namespace Process
     {
         function get_Process_prototype(var obj_proto)
@@ -111,5 +153,9 @@ namespace JavaScript
         var p_proto = JavaScript.Process.get_Process_prototype(object_proto);
         var p = JavaScript.JSObject.box_function(Process, p_proto);
         JavaScript.__store_global("Process", p);
+
+        using JavaScript.Modules.require;
+        var r = JavaScript.JSObject.box_function(require);
+        JavaScript.__store_global("require", r);
     }
 }

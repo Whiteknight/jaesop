@@ -160,7 +160,7 @@ def(wast, "MainFunctionDecl", {
     toWinxed : function() {
         var st = new SymbolTable(null);
         st.declareVarsLocally(false);
-        var wx = "function __js_main__[anon](var arguments)\n" +
+        var wx = "function __js_main__[anon,tag('js_main')](var arguments)\n" +
             "{\n" +
             FUNC_ENTRY;
         emitter.increase_indent();
@@ -178,9 +178,11 @@ def(wast, "MainFunctionDecl", {
         if (fwd_fetch != "")
             fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") + fwd_fetch + "\n";
         wx += fwd_fetch;
+        wx += emitter.emit("var exports = new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__);\n");
         wx += emitter.emit("/* Begin user code */\n") +
             stmts + "\n" +
             emitter.emit("/* End user code */\n") +
+            emitter.emit("return exports;\n") +
             "}";
         emitter.decrease_indent();
         return wx;

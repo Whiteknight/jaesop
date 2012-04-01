@@ -25,7 +25,10 @@ namespace JavaScript
 
     function __fetch_global(string name)
     {
-        return __global_store()[name];
+        var s = __global_store();
+        if (exists s[name])
+            return s[name];
+        return null;
     }
 
     /* JSObject
