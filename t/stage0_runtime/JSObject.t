@@ -61,7 +61,7 @@ class Test_JSObject
         var x = JavaScript.JSObject.construct(null, object);
         self.assert.instance_of(x, class JavaScript.JSObject);
         self.assert.same(x.constructor, object);
-        self.assert.same(x.prototype, object.prototype);
+        self.assert.same(x.prototype.prototype, object.prototype);
 
         // Create a new type with a new constructor. Verify that arguments
         // to construct are passed to the constructor.

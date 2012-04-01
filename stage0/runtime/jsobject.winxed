@@ -57,6 +57,10 @@ namespace JavaScript
             die(sprintf("JSObject: " + fmt, args));
         }
 
+        /*
+            function Foo() { ... }
+        */
+
         // Box a native Parrot Sub PMC into a JSObject with Function
         // prototype/constructor. Allows setting a custom prototype if one
         // is available.
@@ -69,6 +73,10 @@ namespace JavaScript
             ${ getprop jsf, PROP_NAME_JSFUNC, f };
             if (jsf == null) {
                 var function_constructor = __fetch_global("Function");
+                if (!has_proto || proto == null) {
+                    var f_proto = JavaScript.Function.get_Function_prototype();
+                    proto = new JSObject(f_proto, null);
+                }
                 jsf = construct(proto, function_constructor, f);
 
                 // Cache the JSObject as a property on the Sub, so we don't
@@ -84,8 +92,8 @@ namespace JavaScript
         {
             if (!(constructor instanceof JSObject))
                 constructor = box_function(constructor, null);
-            if (proto == null)
-                proto = get_prototype(constructor);
+            //if (proto == null)
+                //proto = get_prototype(constructor);
             var jsobj = new JSObject(proto, constructor, jsobj_values:[flat,named]);
             constructor(constr_args:[flat], jsobj:[named('this')]);
             return jsobj;
@@ -101,12 +109,20 @@ namespace JavaScript
         function JSObject(var prototype, var constructor, var values [slurpy,named])
         {
             var jsobj_class = class JSObject;
-            if (prototype == null && constructor != null)
-                prototype = constructor.*"prototype";
-            var attrs = {
-                ATTR_NAME_PROTOTYPE : prototype,
-                ATTR_NAME_CONSTRUCTOR : constructor
-            };
+            //if (prototype == null && constructor != null)
+                //prototype = constructor.*"prototype";
+            var attrs = {};
+            attrs[ATTR_NAME_CONSTRUCTOR] = constructor;
+            if (prototype == null) {
+                if (constructor != null)
+                    prototype = new JSObject(constructor.*"prototype", null);
+                else {
+                    var obj_prototype = JavaScript.Object.get_Object_prototype();
+                    var obj_constructor = JavaScript.__fetch_global("Object");
+                    prototype = new JSObject(obj_prototype, obj_constructor);
+                }
+            }
+            attrs[ATTR_NAME_PROTOTYPE] = prototype;
             for (string key in values)
                 attrs[key] = values[key];
             ${ setattribute self, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
@@ -124,13 +140,16 @@ namespace JavaScript
             if (exists attrs[key])
                 return attrs[key];
 
-            // If not, we can try to look in the prototype
-            if (key != ATTR_NAME_PROTOTYPE && (exists attrs[ATTR_NAME_PROTOTYPE])) {
-                var proto = attrs[ATTR_NAME_PROTOTYPE];
+            // If we're looking for .prototype but don't have it, create an
+            // empty object for it, falling back to the constructor's prototype
+            if (key == ATTR_NAME_PROTOTYPE) {
+                die("Object does not have a prototype");
+            } else {
+                var proto = self.*"prototype";
                 if (proto != null)
                     return proto.*key;
+                return null;
             }
-            return null;
         }
 
         function set_attr_str[vtable](string key, var value)
@@ -270,7 +289,18 @@ namespace JavaScript
     {
         function get_Function_prototype[anon]()
         {
-            var p = new JSObject(null, null);
+            var p;
+            ${ get_global p, "JSObject.FunctionPrototype" };
+            if (p != null)
+                return p;
+            p = new JSObject;
+            var attrs = {
+                ATTR_NAME_PROTOTYPE : null,
+                ATTR_NAME_CONSTRUCTOR : null
+            };
+            var jsobj_class = class JavaScript.JSObject;
+            ${ setattribute p, jsobj_class, ATTR_NAME_ATTRIBUTES, attrs };
+            ${ set_global "JSObject.FunctionPrototype", p };
             return p;
         }
 
@@ -308,10 +338,18 @@ namespace JavaScript
     // Object is what most objects are.
     namespace Object
     {
-        function get_Object_prototype[anon](var func_proto)
+        function get_Object_prototype[anon](var func_proto = null)
         {
             using JavaScript.JSObject.box_function;
-            var p = new JSObject(func_proto, null);
+            var p;
+            ${ get_global p, "JSObject.ObjectPrototype" };
+            if (p != null)
+                return p;
+
+            if (func_proto == null)
+                die("Creating Object Prototype the first time requires the Function prototype");
+
+            p = new JSObject(func_proto, null);
 
             p.*"hasOwnProperty" = box_function(function(string key, var this [named]) {
                 var attrs = this.get_attribute_hash();
@@ -322,6 +360,7 @@ namespace JavaScript
                 return this.get_prototype();
             });
 
+            ${ set_global "JSObject.ObjectPrototype", p };
             return p;
         }
 
