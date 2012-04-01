@@ -2,7 +2,7 @@ var sys = require("sys");
 
 var argv = process.argv;
 var node_exe = argv.shift();
-var js2wx_exe = argv.shift().split("/").pop();
+var js2wx_exe = argv.shift();
 
 // Stage 0 Driver Program
 // This function runs the stage 0 compiler. It parses JavaScript input to an

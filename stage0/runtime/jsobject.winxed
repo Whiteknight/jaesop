@@ -385,6 +385,12 @@ namespace JavaScript
                     f(a[i]);
             });
 
+            p.*"shift" = box_function(function(var this [named]) {
+                var a = this.*"__ARRAY_CONTENTS__";
+                var r = a.shift();
+                return r;
+            });
+
             p.*"__DOES_ROLES__" = ["array", "hash"];
             return p;
         }
