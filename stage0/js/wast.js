@@ -168,6 +168,7 @@ def(wast, "MainFunctionDecl", {
 
         var fwd_fetch = "";
         for (var g in st_globals) {
+            //sys.puts("Saw global " + g + " locally");
             if (g in st.globals_seen_locally)
                 fwd_fetch += emitter.emit("var " + g + " = __fetch_global('" + g + "');\n");
             else
@@ -233,8 +234,12 @@ def(wast, "ClosureDecl", {
         wx += emitter.emit("function (" + this.args.map(function(a) { return a.toWinxed(st); }).join(", ") + ") {\n");
         emitter.increase_indent();
         var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
-        for (var gsl in st.globals_seen_locally)
-            wx += emitter.emit("var " + gsl + " = __fetch_global('" + gsl + "');\n");
+        for (var gsl in st.globals_seen_locally) {
+            if (st.parent.declare_vars_locally == true)     // This is a function
+                st.parent.seeGlobalLocally(gsl);
+            else
+                wx += emitter.emit("var " + gsl + " = __fetch_global('" + gsl + "');\n");
+        }
         wx += stmts;
         emitter.decrease_indent();
         wx += emitter.emit("}\n");
@@ -281,6 +286,7 @@ def(wast, "VariableDeclare", {
     setInitializer : function(i) { this.initializer = i; },
     toWinxed : function(st) {
         var n = this.name.name;
+        //sys.puts("Declaring variable " + n + " + " + st.declare_vars_locally);
         if (n == undefined)
             n = this.name.value;
         var wx = "";
@@ -310,6 +316,7 @@ def(wast, "VariableName", {
     toWinxed : function(st) {
         var n = this.name.toString();
         var locale = st.findSymbol(n);
+        //sys.puts("Using variable " + n + " " + locale);
         if (locale == null) {
             st.addGlobal(n);
             st.seeGlobalLocally(n);
