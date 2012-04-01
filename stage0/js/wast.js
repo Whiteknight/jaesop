@@ -163,8 +163,9 @@ def(wast, "MainFunctionDecl", {
         var wx = "function __js_main__[anon](var arguments)\n" +
             "{\n" +
             FUNC_ENTRY;
-        //emitter.increase_indent();
+        emitter.increase_indent();
         var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
+
 
         var fwd_fetch = "";
         for (var g in st_globals) {
@@ -177,12 +178,11 @@ def(wast, "MainFunctionDecl", {
         if (fwd_fetch != "")
             fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") + fwd_fetch + "\n";
         wx += fwd_fetch;
-
         wx += emitter.emit("/* Begin user code */\n") +
             stmts + "\n" +
             emitter.emit("/* End user code */\n") +
             "}";
-        //emitter.decrease_indent();
+        emitter.decrease_indent();
         return wx;
     }
 });
