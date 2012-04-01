@@ -36,7 +36,8 @@ function main(args) {
         }
     }
 
-    var infileText = fs.readFileSync(infile).toString();
+    var inbuffer = fs.readFileSync(infile);
+    var infileText = inbuffer.toString();
 
     // Parse JavaScript to AST
     var ast = compiler.parse(infileText);

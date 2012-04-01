@@ -145,7 +145,7 @@ def(expr,'LiteralExpr', {
                 v = 'null';
                 break;
             case 'string':
-                v = "'"+this.value+"'";
+                v = "\"" + this.value + "\"";
                 break;
             default:
                 v = this.value.toString();

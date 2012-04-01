@@ -121,6 +121,7 @@ def(wast, "Program", {
             "    using JavaScript.JSObject.box_function;\n" +
             "    using JavaScript.__store_global;\n" +
             "    using JavaScript.__fetch_global;\n" +
+            "    var __OBJECT_CONSTRUCTOR__ = __fetch_global('Object');\n" +
             "    try {\n" +
             "        /* Setup the process */\n" +
             "        var __process_const = __fetch_global('Process');\n" +
@@ -133,8 +134,8 @@ def(wast, "Program", {
                 var name = c.name.toWinxed(st);
                 st.addGlobal(name);
                 return "        using " + name + ";\n" +
-                    "        __f = box_function(" + name + ");\n" +
-                    "        __store_global('" + name + "', __f);\n";
+                       "        __f = box_function(" + name + ");\n" +
+                       "        __store_global('" + name + "', __f);\n";
             } else
                 return "";
         }).join("\n");
@@ -160,9 +161,13 @@ def(wast, "MainFunctionDecl", {
     toWinxed : function() {
         var st = new SymbolTable(null);
         st.declareVarsLocally(false);
-        var wx = "function __js_main__[anon,tag('js_main')](var arguments)\n" +
+        var wx = "function __js_main__[anon,tag('js_main')](var arguments = null)\n" +
             "{\n" +
-            FUNC_ENTRY;
+            FUNC_ENTRY +
+            "    /* Setup 'exports' */\n" +
+            "    var __old_exports = __fetch_global('exports');\n" +
+            "    var __exports = new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__);\n" +
+            "    __store_global('exports', __exports);\n\n";
         emitter.increase_indent();
         var stmts = this.children.map(function(c) { return emitter.emit(c.toWinxed(st)) + ";\n"; }).join("");
 
@@ -178,11 +183,11 @@ def(wast, "MainFunctionDecl", {
         if (fwd_fetch != "")
             fwd_fetch = emitter.emit("/* Declare and fetch global values */\n") + fwd_fetch + "\n";
         wx += fwd_fetch;
-        wx += emitter.emit("var exports = new JavaScript.JSObject(null, __OBJECT_CONSTRUCTOR__);\n");
         wx += emitter.emit("/* Begin user code */\n") +
             stmts + "\n" +
             emitter.emit("/* End user code */\n") +
-            emitter.emit("return exports;\n") +
+            "    __store_global('exports', __old_exports);\n" +
+            "    return __exports;\n" +
             "}";
         emitter.decrease_indent();
         return wx;
@@ -474,7 +479,7 @@ def(wast, "MemberExpr", {
         var wx = this.children[0].toWinxed(st);
         var child = this.children[1].toWinxed(st);
         if (this.children[1].nodeType == "Literal") {
-            if (child.substring(0, 1) == "'" && child.substring(child.length - 1, child.length) == "'")
+            if (child.substring(0, 1) == "\"" && child.substring(child.length - 1, child.length) == "\"")
                 wx += ".*" + child;
             else
                 wx += ".*'" + child + "'";

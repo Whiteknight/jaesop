@@ -15,14 +15,15 @@ function harness_main(var args)
     if (elements(args) == 0) {
         args = [
             "t/stage0",
-            "t/stage0_runtime"
+            "t/stage0_runtime",
+            "t/stage0_modules"
         ];
     }
 
     harness.add_testfile_type("t/stage0", class JavaScriptStage0File);
     for (string path in args) {
         var parts = split("_", path);
-        if (elements(parts) > 1)
+        if (path == "t/stage0_runtime")
             harness.add_test_dirs("Winxed", path, 1:[named("recurse")]);
         else
             harness.add_test_dirs(string(parts[0]), path, 1:[named("recurse")]);
@@ -55,7 +56,7 @@ Parrot/Winxed TAP Harness for Jaesop. Execute test suite in folders. If
 <DIRS> is passed execute tests in those directories only. Otherwise, execute
 tests in default directories.
 
-    default directories: ( "t/stage0" ).
+    default directories: ( "t/stage0" "t/stage0_runtime" "t/stage0_modules").
 
     <DIRS>      A list of test directories to execute
     --help      Show this help message

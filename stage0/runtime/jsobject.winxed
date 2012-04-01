@@ -7,15 +7,27 @@ namespace JavaScript
     const string ATTR_NAME_CONSTRUCTOR = "constructor";
     const string ATTR_NAME_ATTRIBUTES = "attributes";
     const string PROP_NAME_JSFUNC = "!!!jsfunction!!!";
+    const string JAESOP_ALL_GLOBALS = "JAESOP_ALL_GLOBALS";
+    const string JAESOP_CURRENT_GLOBALS = "JAESOP_CURRENT_GLOBALS";
 
     /* Global value store
     */
 
-    function __global_store[anon]()
+    function __setup_globals[anon, load, init]()
     {
-        var store = {};
-        while(1)
-            yield store;
+        var globals;
+        ${ get_global globals, JAESOP_ALL_GLOBALS };
+        if (globals == null) {
+            globals = {};
+            ${ set_global JAESOP_ALL_GLOBALS, globals };
+        }
+    }
+
+    inline __global_store() return var
+    {
+        var globals;
+        ${ get_global globals, JAESOP_ALL_GLOBALS };
+        return globals;
     }
 
     function __store_global(string name, var jsobj)
@@ -30,6 +42,8 @@ namespace JavaScript
             return s[name];
         return null;
     }
+
+
 
     /* JSObject
     */

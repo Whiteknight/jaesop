@@ -7,13 +7,14 @@ namespace JavaScript
             var export_registry = JavaScript.__fetch_global("!!!MODULE_EXPORTS!!!");
             if (export_registry == null) {
                 export_registry = {};
-                JavaScript.__store_global("!!!MODULE_EXPORTS!!!");
+                JavaScript.__store_global("!!!MODULE_EXPORTS!!!", export_registry);
             }
             return export_registry;
         }
 
-        function require(string modulename)
+        function require(string modulename, var this [named('this')])
         {
+            //say("Requiring module " + modulename);
             var export_registry = __get_module_registry();
             if (exists export_registry[modulename])
                 return export_registry[modulename];
@@ -21,6 +22,7 @@ namespace JavaScript
             var exports = null;
             try {
                 string fullname = "stage0/modules/" + modulename + ".pbc";
+                //say("Searcing for bytecode " + fullname);
                 var lib = load_packfile(fullname);
                 if (!lib.is_initialized("load")) {
                     for (var s in lib.subs_by_tag("load"))
@@ -36,6 +38,9 @@ namespace JavaScript
                 }
                 export_registry[modulename] = exports;
             } catch(e) {
+                say("Have Error: " + string(e.message));
+                for (string bt in e.backtrace_strings())
+                    say(bt);
                 // TODO: How to handle error here?
             }
             return exports;
@@ -56,8 +61,10 @@ namespace JavaScript
             p.*"openFile" = box_function(function(string path, string mode, var this [named('this')]) {
                 var f = new 'FileHandle';
                 f.open(path, mode);
-                return box_stream(f);
+                return JavaScript.FileStream.box_stream(f);
             });
+
+            return p;
         }
 
         function Process(var argv, var this [named('this')])
